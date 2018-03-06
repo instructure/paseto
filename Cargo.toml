@@ -1,0 +1,28 @@
+[package]
+name = "paseto"
+version = "0.5.0"
+authors = ["Eric <ecoan@instructure.com>"]
+
+[features]
+default = ["v1", "v2", "easy_tokens"]
+v1 = ["hmac", "sha2", "openssl"]
+v2 = ["libsodium-ffi"]
+easy_tokens = ["serde_json", "chrono"]
+
+[dependencies]
+base64 = "^0.9"
+chrono = { version = "^0.4", optional = true, features = ["serde"] }
+error-chain = "~0.11.0"
+hmac = { version = "~0.5", optional = true }
+# Change to sodiumoxide when they have: `crypto_generichash`, and `crypto_aead_xchacha20poly1305_ietf_encrypt`.
+# It's got some nice wrappers around types so we don't have to drop to unsafe.
+libsodium-ffi = { version = "~0.1.11", optional = true }
+openssl = { version = "~0.10.5", optional = true }
+ring = { version = "^0.12", default-features = false, features = ["rsa_signing", "dev_urandom_fallback", "use_heap"] }
+serde_json = { version = "^1.0.0", optional = true }
+sha2 = { version = "~0.7", optional = true }
+# Pin to lower version for ring.
+untrusted = "0.5.1"
+
+[dev-dependencies]
+hex = "^0.3.1"
