@@ -2,7 +2,7 @@
 version: 2
 executorType: docker
 containerInfo:
-  - image: jimmycuadra/rust:latest
+  - image: rust:latest
 stages:
   build:
     workDir: /source
