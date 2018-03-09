@@ -12,11 +12,11 @@ stages:
         command: apt-get update
       - type: shell
         shell: /bin/bash
-        command: SODIUM_BUILD_STATIC=yes SODIUM_STATIC=yes apt-get install openssh-client -y
+        command: apt-get install openssh-client -y
       - type: checkout
       - type: shell
         shell: /bin/bash
-        command: cargo build
+        command: SODIUM_BUILD_STATIC=yes SODIUM_STATIC=yes cargo build
       - type: shell
         shell: /bin/bash
         command: SODIUM_BUILD_STATIC=yes SODIUM_STATIC=yes cargo test
