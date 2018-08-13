@@ -43,7 +43,7 @@ pub fn public_paseto(msg: String, footer: Option<String>, key_pair: &Ed25519KeyP
 /// Verifies a "v2.public" paseto token based on a given key pair.
 ///
 /// Returns the message if verification was successful, otherwise an Err().
-pub fn verify_paseto(token: String, footer: Option<String>, key_pair: &Ed25519KeyPair) -> Result<String> {
+pub fn verify_paseto(token: String, footer: Option<String>, public_key: &[u8]) -> Result<String> {
   let token_parts = token.split(".").map(|item| item.to_owned()).collect::<Vec<String>>();
   if token_parts.len() < 3 {
     return Err(ErrorKind::InvalidPasetoToken.into());
@@ -77,7 +77,7 @@ pub fn verify_paseto(token: String, footer: Option<String>, key_pair: &Ed25519Ke
     Vec::from(footer_as_str.as_bytes()),
   ]);
 
-  let pk_as_untrusted = UntrustedInput::from(key_pair.public_key_bytes());
+  let pk_as_untrusted = UntrustedInput::from(public_key);
   let sig_as_untrusted = UntrustedInput::from(sig);
   let pae_as_untrusted = UntrustedInput::from(&pre_auth);
 
@@ -118,8 +118,8 @@ mod unit_tests {
     assert!(public_token_one.starts_with("v2.public."));
     assert!(public_token_two.starts_with("v2.public."));
 
-    let verified_one = verify_paseto(public_token_one.clone(), None, &as_key);
-    let verified_two = verify_paseto(public_token_two, None, &as_key);
+    let verified_one = verify_paseto(public_token_one.clone(), None, as_key.public_key_bytes());
+    let verified_two = verify_paseto(public_token_two, None, as_key.public_key_bytes());
 
     // Verify the above tokens.
     assert!(verified_one.is_ok());
@@ -130,7 +130,7 @@ mod unit_tests {
       String::from("{\"data\": \"yo bro\", \"expires\": \"2018-01-01T00:00:00+00:00\"}")
     );
 
-    let should_not_verify_one = verify_paseto(public_token_one, Some(String::from("data")), &as_key);
+    let should_not_verify_one = verify_paseto(public_token_one, Some(String::from("data")), as_key.public_key_bytes());
 
     // Verify if it doesn't have a footer in public that it won't pass a verification with a footer.
     assert!(should_not_verify_one.is_err());
@@ -147,8 +147,8 @@ mod unit_tests {
     assert!(public_token_three.starts_with("v2.public."));
     assert!(public_token_four.starts_with("v2.public."));
 
-    let verified_three = verify_paseto(public_token_three.clone(), Some(String::from("footer")), &as_key);
-    let verified_four = verify_paseto(public_token_four, Some(String::from("footer")), &as_key);
+    let verified_three = verify_paseto(public_token_three.clone(), Some(String::from("footer")), as_key.public_key_bytes());
+    let verified_four = verify_paseto(public_token_four, Some(String::from("footer")), as_key.public_key_bytes());
 
     // Verify the footer tokens.
     assert!(verified_three.is_ok());
@@ -160,8 +160,8 @@ mod unit_tests {
     );
 
     // Validate no footer + invalid footer both fail on tokens encode with footer.
-    let should_not_verify_two = verify_paseto(public_token_three.clone(), None, &as_key);
-    let should_not_verify_three = verify_paseto(public_token_three, Some(String::from("bleh")), &as_key);
+    let should_not_verify_two = verify_paseto(public_token_three.clone(), None, as_key.public_key_bytes());
+    let should_not_verify_three = verify_paseto(public_token_three, Some(String::from("bleh")), as_key.public_key_bytes());
 
     assert!(should_not_verify_two.is_err());
     assert!(should_not_verify_three.is_err());

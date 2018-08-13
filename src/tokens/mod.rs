@@ -180,7 +180,7 @@ pub fn validate_public_token(token: String, footer: Option<String>, key: PasetoP
   if token.starts_with("v2.public.") {
     return match key {
       PasetoPublicKey::ED25519KeyPair(key_pair) => {
-        let internal_msg = try!(V2Verify(token, footer, &key_pair));
+        let internal_msg = try!(V2Verify(token, footer, key_pair.public_key_bytes()));
         validate_potential_json_blob(internal_msg)
       }
       _ => Err(ErrorKind::InvalidKey.into()),

@@ -5,8 +5,6 @@ extern crate base64;
 extern crate chrono;
 #[macro_use]
 extern crate error_chain;
-#[cfg(feature = "v1")]
-extern crate hmac;
 #[cfg(feature = "v2")]
 extern crate libsodium_ffi as libsodium;
 #[cfg(feature = "v1")]
@@ -15,8 +13,6 @@ extern crate ring;
 #[cfg(feature = "easy_tokens")]
 #[macro_use]
 extern crate serde_json;
-#[cfg(feature = "v1")]
-extern crate sha2;
 extern crate untrusted;
 
 #[cfg(test)]

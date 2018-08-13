@@ -5,14 +5,12 @@ use v1::get_nonce::calculate_hashed_nonce;
 use pae::pae;
 
 use base64::{decode_config, encode_config, URL_SAFE_NO_PAD};
-use hmac::{Hmac, Mac};
 use openssl::symm;
 use ring::constant_time::verify_slices_are_equal as ConstantTimeEquals;
 use ring::digest::SHA384;
 use ring::hkdf::extract_and_expand as HKDF;
-use ring::hmac::SigningKey;
+use ring::hmac::{sign, SigningKey};
 use ring::rand::{SecureRandom, SystemRandom};
-use sha2::Sha384;
 
 /// Encrypt a "v1.local" paseto token.
 ///
@@ -34,7 +32,7 @@ pub fn local_paseto(msg: String, footer: Option<String>, key: &[u8]) -> Result<S
 fn underlying_local_paseto(msg: String, footer: Option<String>, random_nonce: &[u8], key: &[u8]) -> Result<String> {
   let header = String::from("v1.local.");
   let footer_frd = footer.unwrap_or(String::default());
-  let true_nonce = try!(calculate_hashed_nonce(msg.as_bytes(), random_nonce));
+  let true_nonce = calculate_hashed_nonce(msg.as_bytes(), random_nonce);
 
   let (as_salt, ctr_nonce) = true_nonce.split_at(16);
   let hkdf_salt = SigningKey::new(&SHA384, as_salt);
@@ -58,14 +56,9 @@ fn underlying_local_paseto(msg: String, footer: Option<String>, random_nonce: &[
     Vec::from(footer_frd.as_bytes()),
   ]);
 
-  let mac = Hmac::<Sha384>::new(&ak);
-  if mac.is_err() {
-    return Err(ErrorKind::HmacError.into());
-  }
-  let mut mac = mac.unwrap();
-  mac.input(&pre_auth);
-  let constant_time_wrapped_mac = mac.result();
-  let raw_bytes_from_hmac = constant_time_wrapped_mac.code();
+  let mac_key = SigningKey::new(&SHA384, &ak);
+  let signed = sign(&mac_key, &pre_auth);
+  let raw_bytes_from_hmac = signed.as_ref();
 
   let mut concated_together = Vec::new();
   concated_together.extend_from_slice(&true_nonce);
@@ -137,14 +130,9 @@ pub fn decrypt_paseto(token: String, footer: Option<String>, key: &[u8]) -> Resu
     Vec::from(footer_str.as_bytes()),
   ]);
 
-  let hmac = Hmac::<Sha384>::new(&ak);
-  if hmac.is_err() {
-    return Err(ErrorKind::HmacError.into());
-  }
-  let mut hmac = hmac.unwrap();
-  hmac.input(&pre_auth);
-  let constant_time_wrapped_mac = hmac.result();
-  let raw_bytes_from_hmac = constant_time_wrapped_mac.code();
+  let mac_key = SigningKey::new(&SHA384, &ak);
+  let signed = sign(&mac_key, &pre_auth);
+  let raw_bytes_from_hmac = signed.as_ref();
 
   if ConstantTimeEquals(&raw_bytes_from_hmac, mac).is_err() {
     return Err(ErrorKind::InvalidPasetoToken.into());

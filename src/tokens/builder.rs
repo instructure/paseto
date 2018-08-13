@@ -163,7 +163,7 @@ impl PasetoBuilder {
   ///
   /// NOTE: This will not be used if you set a symmetric encryption key, or if you specify an Ed25519 key pair.
   pub fn set_rsa_key(mut self, private_key_der: Vec<u8>) -> Self {
-    self.rsa_key = Some((private_key_der));
+    self.rsa_key = Some(private_key_der);
     self
   }
 }
