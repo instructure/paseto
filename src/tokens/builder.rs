@@ -1,17 +1,19 @@
-use errors::*;
+use crate::errors::{GenericError, RsaKeyErrors};
+
 #[cfg(feature = "v1")]
-use v1::public_paseto as V1Public;
+use crate::v1::public_paseto as V1Public;
 #[cfg(all(not(feature = "v2"), feature = "v1"))]
-use v1::local_paseto as V1Local;
+use crate::v1::local_paseto as V1Local;
 #[cfg(feature = "v2")]
-use v2::{local_paseto as V2Local, public_paseto as V2Public};
+use crate::v2::{local_paseto as V2Local, public_paseto as V2Public};
 
 use chrono::prelude::*;
+use failure::Error;
 #[cfg(feature = "v1")]
 use ring::signature::{RSAKeyPair, RSASigningState};
 #[cfg(feature = "v2")]
 use ring::signature::Ed25519KeyPair;
-use serde_json::{Value as JsonValue, to_string as JsonToString};
+use serde_json::{json, to_string, Value};
 #[cfg(feature = "v1")]
 use untrusted::Input as UntrustedInput;
 
@@ -32,7 +34,7 @@ pub struct PasetoBuilder {
   #[cfg(feature = "v2")]
   ed_key: Option<Ed25519KeyPair>,
   /// Any extra claims you want to store in your json.
-  extra_claims: HashMap<String, JsonValue>,
+  extra_claims: HashMap<String, Value>,
 }
 
 #[cfg(all(feature = "v1", feature = "v2"))]
@@ -49,12 +51,8 @@ impl PasetoBuilder {
   }
 
   /// Builds a token.
-  pub fn build(self) -> Result<String> {
-    let json_as_str = JsonToString(&self.extra_claims);
-    if json_as_str.is_err() {
-      return Err(ErrorKind::JsonError.into());
-    }
-    let strd_msg = json_as_str.unwrap();
+  pub fn build(self) -> Result<String, Error> {
+    let strd_msg = to_string(&self.extra_claims)?;
 
     if self.encryption_key.is_some() {
       let mut enc_key = self.encryption_key.unwrap();
@@ -67,17 +65,17 @@ impl PasetoBuilder {
       let private_key_der = UntrustedInput::from(&the_rsa_key);
       let key_pair = RSAKeyPair::from_der(private_key_der);
       if key_pair.is_err() {
-        return Err(ErrorKind::InvalidRsaKey.into());
+        return Err(RsaKeyErrors::InvalidKey {})?;
       }
       let key_pair = Arc::new(key_pair.unwrap());
       let signing_state = RSASigningState::new(key_pair);
       if signing_state.is_err() {
-        return Err(ErrorKind::InvalidRsaKey.into());
+        return Err(RsaKeyErrors::InvalidKey {})?;
       }
       let mut signing_state = signing_state.unwrap();
       return V1Public(strd_msg, self.footer, &mut signing_state);
     } else {
-      return Err(ErrorKind::NoKeysProvided.into());
+      return Err(GenericError::NoKeyProvided {})?;
     }
   }
 }
@@ -95,12 +93,8 @@ impl PasetoBuilder {
   }
 
   /// Builds a token.
-  pub fn build(self) -> Result<String> {
-    let json_as_str = JsonToString(&self.extra_claims);
-    if json_as_str.is_err() {
-      return Err(ErrorKind::JsonError.into());
-    }
-    let strd_msg = json_as_str.unwrap();
+  pub fn build(self) -> Result<String, Error> {
+    let strd_msg = to_string(&self.extra_claims)?;
 
     if self.encryption_key.is_some() {
       let mut enc_key = self.encryption_key.unwrap();
@@ -110,17 +104,17 @@ impl PasetoBuilder {
       let private_key_der = UntrustedInput::from(&the_rsa_key);
       let key_pair = RSAKeyPair::from_der(private_key_der);
       if key_pair.is_err() {
-        return Err(ErrorKind::InvalidRsaKey.into());
+        return Err(RsaKeyErrors::InvalidKey {})?;
       }
       let key_pair = Arc::new(key_pair.unwrap());
       let signing_state = RSASigningState::new(key_pair);
       if signing_state.is_err() {
-        return Err(ErrorKind::InvalidRsaKey.into());
+        return Err(RsaKeyErrors::InvalidKey {})?;
       }
       let mut signing_state = signing_state.unwrap();
       return V1Public(strd_msg, self.footer, &mut signing_state);
     } else {
-      return Err(ErrorKind::NoKeysProvided.into());
+      return Err(GenericError::NoKeyProvided {})?;
     }
   }
 }
@@ -139,11 +133,7 @@ impl PasetoBuilder {
 
   /// Builds a token.
   pub fn build(self) -> Result<String> {
-    let json_as_str = JsonToString(&self.extra_claims);
-    if json_as_str.is_err() {
-      return Err(ErrorKind::JsonError.into());
-    }
-    let strd_msg = json_as_str.unwrap();
+    let strd_msg = to_string(&self.extra_claims)?;
 
     if self.encryption_key.is_some() {
       let mut enc_key = self.encryption_key.unwrap();
@@ -152,7 +142,7 @@ impl PasetoBuilder {
       let ed_key_pair = self.ed_key.unwrap();
       return V2Public(strd_msg, self.footer, &ed_key_pair);
     } else {
-      return Err(ErrorKind::NoKeysProvided.into());
+      return Err(GenericError::NoKeyProvided {})?;
     }
   }
 }
@@ -195,7 +185,7 @@ impl PasetoBuilder {
   }
 
   /// Sets an arbitrary claim (a key inside the json token).
-  pub fn set_claim(mut self, key: String, value: JsonValue) -> Self {
+  pub fn set_claim(mut self, key: String, value: Value) -> Self {
     self.extra_claims.insert(key, value);
     self
   }
@@ -241,7 +231,7 @@ impl PasetoBuilder {
 #[cfg(test)]
 mod unit_test {
   use super::*;
-  use v2::local::decrypt_paseto as V2Decrypt;
+  use crate::v2::local::decrypt_paseto as V2Decrypt;
 
   use serde_json::from_str as ParseJson;
 
@@ -267,7 +257,7 @@ mod unit_test {
       &mut Vec::from("YELLOW SUBMARINE, BLACK WIZARDRY".as_bytes()),
     ).expect("Failed to decrypt token constructed with builder!");
 
-    let parsed: JsonValue = ParseJson(&decrypted_token).expect("Failed to parse finalized token as json!");
+    let parsed: Value = ParseJson(&decrypted_token).expect("Failed to parse finalized token as json!");
 
     assert!(parsed.get("iat").is_some());
     assert!(parsed.get("iss").is_some());

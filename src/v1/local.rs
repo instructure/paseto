@@ -1,10 +1,11 @@
 //! An implementation of paseto v1 "local" tokens, or tokens encrypted using a shared secret.
 
-use errors::*;
-use v1::get_nonce::calculate_hashed_nonce;
-use pae::pae;
+use crate::errors::GenericError;
+use crate::v1::get_nonce::calculate_hashed_nonce;
+use crate::pae::pae;
 
 use base64::{decode_config, encode_config, URL_SAFE_NO_PAD};
+use failure::Error;
 use openssl::symm;
 use ring::constant_time::verify_slices_are_equal as ConstantTimeEquals;
 use ring::digest::SHA384;
@@ -15,10 +16,10 @@ use ring::rand::{SecureRandom, SystemRandom};
 /// Encrypt a "v1.local" paseto token.
 ///
 /// Returns a result of a string if encryption was successful.
-pub fn local_paseto(msg: String, footer: Option<String>, key: &[u8]) -> Result<String> {
+pub fn local_paseto(msg: String, footer: Option<String>, key: &[u8]) -> Result<String, Error> {
   let rng = SystemRandom::new();
   let mut buff: [u8; 32] = [0u8; 32];
-  try!(rng.fill(&mut buff));
+  rng.fill(&mut buff)?;
 
   underlying_local_paseto(msg, footer, &buff, key)
 }
@@ -29,7 +30,7 @@ pub fn local_paseto(msg: String, footer: Option<String>, key: &[u8]) -> Result<S
 /// `footer` - The optional footer.
 /// `random_nonce` - The random nonce.
 /// `key` - The key used for encryption.
-fn underlying_local_paseto(msg: String, footer: Option<String>, random_nonce: &[u8], key: &[u8]) -> Result<String> {
+fn underlying_local_paseto(msg: String, footer: Option<String>, random_nonce: &[u8], key: &[u8]) -> Result<String, Error> {
   let header = String::from("v1.local.");
   let footer_frd = footer.unwrap_or(String::default());
   let true_nonce = calculate_hashed_nonce(msg.as_bytes(), random_nonce);
@@ -43,11 +44,7 @@ fn underlying_local_paseto(msg: String, footer: Option<String>, random_nonce: &[
   HKDF(&hkdf_salt, key, "paseto-auth-key-for-aead".as_bytes(), &mut ak);
 
   let cipher = symm::Cipher::aes_256_ctr();
-  let crypted = symm::encrypt(cipher, &ek, Some(&ctr_nonce), msg.as_bytes());
-  if crypted.is_err() {
-    return Err(ErrorKind::OpensslError.into());
-  }
-  let crypted = crypted.unwrap();
+  let crypted = symm::encrypt(cipher, &ek, Some(&ctr_nonce), msg.as_bytes())?;
 
   let pre_auth = pae(vec![
     Vec::from(header.as_bytes()),
@@ -84,10 +81,10 @@ fn underlying_local_paseto(msg: String, footer: Option<String>, random_nonce: &[
 /// `token` - The encrypted token.
 /// `footer` - The optional footer to validate against.
 /// `key` - The key used to encrypt the token.
-pub fn decrypt_paseto(token: String, footer: Option<String>, key: &[u8]) -> Result<String> {
+pub fn decrypt_paseto(token: String, footer: Option<String>, key: &[u8]) -> Result<String, Error> {
   let token_parts = token.split(".").map(|item| item.to_owned()).collect::<Vec<String>>();
   if token_parts.len() < 3 {
-    return Err(ErrorKind::InvalidPasetoToken.into());
+    return Err(GenericError::InvalidToken {})?;
   }
 
   let is_footer_some = footer.is_some();
@@ -95,19 +92,19 @@ pub fn decrypt_paseto(token: String, footer: Option<String>, key: &[u8]) -> Resu
 
   if is_footer_some {
     if token_parts.len() < 4 {
-      return Err(ErrorKind::InvalidPasetoFooter.into());
+      return Err(GenericError::InvalidFooter {})?;
     }
     let as_base64 = encode_config(footer_str.as_bytes(), URL_SAFE_NO_PAD);
 
     if ConstantTimeEquals(as_base64.as_bytes(), token_parts[3].as_bytes()).is_err() {
-      return Err(ErrorKind::InvalidPasetoFooter.into());
+      return Err(GenericError::InvalidFooter {})?;
     }
   }
 
   if token_parts[0] != "v1" || token_parts[1] != "local" {
-    return Err(ErrorKind::InvalidPasetoToken.into());
+    return Err(GenericError::InvalidToken {})?;
   }
-  let decoded = try!(decode_config(token_parts[2].as_bytes(), URL_SAFE_NO_PAD));
+  let decoded = decode_config(token_parts[2].as_bytes(), URL_SAFE_NO_PAD)?;
   let (nonce, t_and_c) = decoded.split_at(32);
   // NLL :shakefists:
   let t_and_c_vec = Vec::from(t_and_c);
@@ -135,17 +132,13 @@ pub fn decrypt_paseto(token: String, footer: Option<String>, key: &[u8]) -> Resu
   let raw_bytes_from_hmac = signed.as_ref();
 
   if ConstantTimeEquals(&raw_bytes_from_hmac, mac).is_err() {
-    return Err(ErrorKind::InvalidPasetoToken.into());
+    return Err(GenericError::InvalidToken {})?;
   }
 
   let cipher = symm::Cipher::aes_256_ctr();
-  let decrypted = symm::decrypt(cipher, &ek, Some(ctr_nonce), ciphertext);
-  if decrypted.is_err() {
-    return Err(ErrorKind::OpensslError.into());
-  }
-  let decrypted = decrypted.unwrap();
+  let decrypted = symm::decrypt(cipher, &ek, Some(ctr_nonce), ciphertext)?;
 
-  Ok(try!(String::from_utf8(decrypted)))
+  Ok(String::from_utf8(decrypted)?)
 }
 
 #[cfg(test)]

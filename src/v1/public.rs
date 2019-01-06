@@ -1,10 +1,11 @@
 //! An implementation of Paseto v1 "public" tokens, or tokens that
 //! are signed with a public/private key pair.
 
-use errors::*;
-use pae::pae;
+use crate::errors::{GenericError, RsaKeyErrors};
+use crate::pae::pae;
 
 use base64::{decode_config, encode_config, URL_SAFE_NO_PAD};
+use failure::Error;
 use ring::constant_time::verify_slices_are_equal as ConstantTimeEquals;
 use ring::rand::SystemRandom;
 use ring::signature::{RSASigningState, RSA_PSS_2048_8192_SHA384, RSA_PSS_SHA384, verify as PubKeyVerify};
@@ -13,9 +14,9 @@ use untrusted::Input as UntrustedInput;
 /// Sign a "v1.public" paseto token.
 ///
 /// Returns a result of a string if signing was successful.
-pub fn public_paseto(msg: String, footer: Option<String>, signing_state: &mut RSASigningState) -> Result<String> {
+pub fn public_paseto(msg: String, footer: Option<String>, signing_state: &mut RSASigningState) -> Result<String, Error> {
   if signing_state.key_pair().public_modulus_len() != 256 {
-    return Err(ErrorKind::InvalidRsaKeySize(256, signing_state.key_pair().public_modulus_len()).into());
+    return Err(RsaKeyErrors::InvalidKey {})?;
   }
   let footer_frd = footer.unwrap_or(String::default());
 
@@ -28,7 +29,7 @@ pub fn public_paseto(msg: String, footer: Option<String>, signing_state: &mut RS
   let random = SystemRandom::new();
 
   let mut signed_msg = [0; 256];
-  try!(signing_state.sign(&RSA_PSS_SHA384, &random, &pre_auth, &mut signed_msg));
+  signing_state.sign(&RSA_PSS_SHA384, &random, &pre_auth, &mut signed_msg)?;
 
   let mut combined_vec = Vec::new();
   combined_vec.extend_from_slice(msg.as_bytes());
@@ -51,10 +52,10 @@ pub fn public_paseto(msg: String, footer: Option<String>, signing_state: &mut RS
 /// Verifies a "v1.public" paseto token based on a public key
 ///
 /// Returns the message if verification was successful, otherwise an Err().
-pub fn verify_paseto(token: String, footer: Option<String>, public_key: &[u8]) -> Result<String> {
+pub fn verify_paseto(token: String, footer: Option<String>, public_key: &[u8]) -> Result<String, Error> {
   let token_parts = token.split(".").map(|item| item.to_owned()).collect::<Vec<String>>();
   if token_parts.len() < 3 {
-    return Err(ErrorKind::InvalidPasetoToken.into());
+    return Err(GenericError::InvalidToken {})?;
   }
 
   let has_provided_footer = footer.is_some();
@@ -62,20 +63,20 @@ pub fn verify_paseto(token: String, footer: Option<String>, public_key: &[u8]) -
 
   if has_provided_footer {
     if token_parts.len() < 4 {
-      return Err(ErrorKind::InvalidPasetoFooter.into());
+      return Err(GenericError::InvalidFooter {})?;
     }
     let footer_encoded = encode_config(footer_as_str.as_bytes(), URL_SAFE_NO_PAD);
 
     if ConstantTimeEquals(footer_encoded.as_bytes(), token_parts[3].as_bytes()).is_err() {
-      return Err(ErrorKind::InvalidPasetoFooter.into());
+      return Err(GenericError::InvalidFooter {})?;
     }
   }
 
   if token_parts[0] != "v1" || token_parts[1] != "public" {
-    return Err(ErrorKind::InvalidPasetoToken.into());
+    return Err(GenericError::InvalidToken {})?;
   }
 
-  let decoded = try!(decode_config(token_parts[2].as_bytes(), URL_SAFE_NO_PAD));
+  let decoded = decode_config(token_parts[2].as_bytes(), URL_SAFE_NO_PAD)?;
   let decoded_len = decoded.len();
   let (message, sig) = decoded.split_at(decoded_len - 256);
 
@@ -89,14 +90,14 @@ pub fn verify_paseto(token: String, footer: Option<String>, public_key: &[u8]) -
   let sig_as_untrusted = UntrustedInput::from(sig);
   let pae_as_untrusted = UntrustedInput::from(&pre_auth);
 
-  try!(PubKeyVerify(
+  PubKeyVerify(
     &RSA_PSS_2048_8192_SHA384,
     pk_as_untrusted,
     pae_as_untrusted,
     sig_as_untrusted
-  ));
+  )?;
 
-  Ok(try!(String::from_utf8(Vec::from(message))))
+  Ok(String::from_utf8(Vec::from(message))?)
 }
 
 #[cfg(test)]

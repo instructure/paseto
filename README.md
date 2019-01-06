@@ -25,8 +25,6 @@ and then in your crate root:
 extern crate paseto;
 ```
 
-_NOTE: You will need to have a modern version of libsodium when building with version 2 support, or export the env var: `SODIUM_BUILD_STATIC=yes`, and `SODIUM_STATIC=yes`_
-
 ## Examples ##
 
 The `examples/` directory covers the following use cases:
