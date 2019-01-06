@@ -16,17 +16,17 @@ stages:
       - type: checkout
       - type: shell
         shell: /bin/bash
-        command: SODIUM_BUILD_STATIC=yes SODIUM_STATIC=yes cargo build
+        command: cargo build
       - type: shell
         shell: /bin/bash
-        command: SODIUM_BUILD_STATIC=yes SODIUM_STATIC=yes cargo test
+        command: cargo test
       - type: shell
         shell: /bin/bash
-        command: SODIUM_BUILD_STATIC=yes SODIUM_STATIC=yes cargo run --example direct-protocol
+        command: cargo run --example direct-protocol
       - type: shell
         shell: /bin/bash
-        command: SODIUM_BUILD_STATIC=yes SODIUM_STATIC=yes cargo run --example local-using-builders
+        command: cargo run --example local-using-builders
       - type: shell
         shell: /bin/bash
-        command: SODIUM_BUILD_STATIC=yes SODIUM_STATIC=yes cargo run --example public-using-builder
+        command: cargo run --example public-using-builder
 
