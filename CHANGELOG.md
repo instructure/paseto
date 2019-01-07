@@ -1,3 +1,10 @@
+## 1.0.2
+
+* Bump Dependencies to latest versions.
+* Use sodiumoxide over libsodium_ffi directly. (no more unsafe \o/)
+* Update to rust 2018 epoch.
+* Can no longer export `SODIUM_BUILD_STATIC`, and `SODIUM_STATIC`
+
 ## 1.0.1
 
 * Bump Dependencies to latest versions.

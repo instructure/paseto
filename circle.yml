@@ -29,4 +29,3 @@ stages:
       - type: shell
         shell: /bin/bash
         command: cargo run --example public-using-builder
-
