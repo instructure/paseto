@@ -8,14 +8,14 @@ use base64::{decode_config, encode_config, URL_SAFE_NO_PAD};
 use failure::Error;
 use ring::constant_time::verify_slices_are_equal as ConstantTimeEquals;
 use ring::rand::SystemRandom;
-use ring::signature::{RSASigningState, RSA_PSS_2048_8192_SHA384, RSA_PSS_SHA384, verify as PubKeyVerify};
+use ring::signature::{RSA_PSS_2048_8192_SHA384, RSA_PSS_SHA384, RsaKeyPair, verify as PubKeyVerify};
 use untrusted::Input as UntrustedInput;
 
 /// Sign a "v1.public" paseto token.
 ///
 /// Returns a result of a string if signing was successful.
-pub fn public_paseto(msg: String, footer: Option<String>, signing_state: &mut RSASigningState) -> Result<String, Error> {
-  if signing_state.key_pair().public_modulus_len() != 256 {
+pub fn public_paseto(msg: String, footer: Option<String>, key_pair: &mut RsaKeyPair) -> Result<String, Error> {
+  if key_pair.public_modulus_len() != 256 {
     return Err(RsaKeyErrors::InvalidKey {})?;
   }
   let footer_frd = footer.unwrap_or(String::default());
@@ -29,7 +29,7 @@ pub fn public_paseto(msg: String, footer: Option<String>, signing_state: &mut RS
   let random = SystemRandom::new();
 
   let mut signed_msg = [0; 256];
-  signing_state.sign(&RSA_PSS_SHA384, &random, &pre_auth, &mut signed_msg)?;
+  key_pair.sign(&RSA_PSS_SHA384, &random, &pre_auth, &mut signed_msg)?;
 
   let mut combined_vec = Vec::new();
   combined_vec.extend_from_slice(msg.as_bytes());
@@ -104,9 +104,7 @@ pub fn verify_paseto(token: String, footer: Option<String>, public_key: &[u8]) -
 mod unit_tests {
   use super::*;
 
-  use ring::signature::RSAKeyPair;
-
-  use std::sync::Arc;
+  use ring::signature::RsaKeyPair;
 
   #[test]
   fn test_v1_public() {
@@ -114,18 +112,16 @@ mod unit_tests {
     let public_key = include_bytes!("signature_rsa_example_public_key.der");
     let private_key_pkcs = UntrustedInput::from(private_key);
 
-    let key_pair = RSAKeyPair::from_der(private_key_pkcs).expect("Bad Private Key pkcs!");
-    let key_pair = Arc::new(key_pair);
-    let mut signing_state = RSASigningState::new(key_pair).expect("Failed to create signing state");
+    let mut key_pair = RsaKeyPair::from_der(private_key_pkcs).expect("Bad Private Key pkcs!");
 
     // Test keys without footers.
-    let public_token_one = public_paseto(String::from("msg"), None, &mut signing_state)
+    let public_token_one = public_paseto(String::from("msg"), None, &mut key_pair)
       .expect("Failed to encode public paseto v1 msg with no footer!");
     // Remember raw protocol doesn't validate expires. We're just ensuring we can encode it.
     let public_token_two = public_paseto(
       String::from("{\"data\": \"yo bro\", \"expires\": \"2018-01-01T00:00:00+00:00\"}"),
       None,
-      &mut signing_state,
+      &mut key_pair,
     ).expect("Failed to encode public paseto v1 json blob with no footer!");
 
     let verified_one = verify_paseto(public_token_one.clone(), None, public_key)
@@ -143,12 +139,12 @@ mod unit_tests {
     let should_not_verify_one = verify_paseto(public_token_one, Some(String::from("hoi")), public_key);
     assert!(should_not_verify_one.is_err());
 
-    let public_token_three = public_paseto(String::from("msg"), Some(String::from("data")), &mut signing_state)
+    let public_token_three = public_paseto(String::from("msg"), Some(String::from("data")), &mut key_pair)
       .expect("Failed to encode public paseto v1 msg with footer!");
     let public_token_four = public_paseto(
       String::from("{\"data\": \"yo bro\", \"expires\": \"2018-01-01T00:00:00+00:00\"}"),
       Some(String::from("data")),
-      &mut signing_state,
+      &mut key_pair,
     ).expect("Failed to encode public paseto v1 json blob with footer!");
 
     let verified_three = verify_paseto(public_token_three.clone(), Some(String::from("data")), public_key)

@@ -10,7 +10,7 @@ use crate::v2::{local_paseto as V2Local, public_paseto as V2Public};
 use chrono::prelude::*;
 use failure::Error;
 #[cfg(feature = "v1")]
-use ring::signature::{RSAKeyPair, RSASigningState};
+use ring::signature::RsaKeyPair;
 #[cfg(feature = "v2")]
 use ring::signature::Ed25519KeyPair;
 use serde_json::{json, to_string, Value};
@@ -18,8 +18,6 @@ use serde_json::{json, to_string, Value};
 use untrusted::Input as UntrustedInput;
 
 use std::collections::HashMap;
-#[cfg(feature = "v1")]
-use std::sync::Arc;
 
 /// A paseto builder.
 pub struct PasetoBuilder {
@@ -63,17 +61,12 @@ impl PasetoBuilder {
     } else if self.rsa_key.is_some() {
       let the_rsa_key = self.rsa_key.unwrap();
       let private_key_der = UntrustedInput::from(&the_rsa_key);
-      let key_pair = RSAKeyPair::from_der(private_key_der);
+      let key_pair = RsaKeyPair::from_der(private_key_der);
       if key_pair.is_err() {
         return Err(RsaKeyErrors::InvalidKey {})?;
       }
-      let key_pair = Arc::new(key_pair.unwrap());
-      let signing_state = RSASigningState::new(key_pair);
-      if signing_state.is_err() {
-        return Err(RsaKeyErrors::InvalidKey {})?;
-      }
-      let mut signing_state = signing_state.unwrap();
-      return V1Public(strd_msg, self.footer, &mut signing_state);
+      let mut key_pair = key_pair.unwrap();
+      return V1Public(strd_msg, self.footer, &mut key_pair);
     } else {
       return Err(GenericError::NoKeyProvided {})?;
     }
@@ -102,17 +95,12 @@ impl PasetoBuilder {
     } else if self.rsa_key.is_some() {
       let the_rsa_key = self.rsa_key.unwrap();
       let private_key_der = UntrustedInput::from(&the_rsa_key);
-      let key_pair = RSAKeyPair::from_der(private_key_der);
+      let key_pair = RsaKeyPair::from_der(private_key_der);
       if key_pair.is_err() {
         return Err(RsaKeyErrors::InvalidKey {})?;
       }
       let key_pair = Arc::new(key_pair.unwrap());
-      let signing_state = RSASigningState::new(key_pair);
-      if signing_state.is_err() {
-        return Err(RsaKeyErrors::InvalidKey {})?;
-      }
-      let mut signing_state = signing_state.unwrap();
-      return V1Public(strd_msg, self.footer, &mut signing_state);
+      //return V1Public(strd_msg, self.footer, &mut signing_state);
     } else {
       return Err(GenericError::NoKeyProvided {})?;
     }

@@ -12,6 +12,7 @@ use chrono::prelude::*;
 use failure::Error;
 #[cfg(feature = "v2")]
 use ring::signature::Ed25519KeyPair;
+use ring::signature::KeyPair;
 use serde_json::{Value as JsonValue, from_str as ParseJson};
 
 pub mod builder;
@@ -178,7 +179,7 @@ pub fn validate_public_token(token: String, footer: Option<String>, key: PasetoP
   if token.starts_with("v2.public.") {
     return match key {
       PasetoPublicKey::ED25519KeyPair(key_pair) => {
-        let internal_msg = V2Verify(token, footer, key_pair.public_key_bytes())?;
+        let internal_msg = V2Verify(token, footer, key_pair.public_key().as_ref())?;
         validate_potential_json_blob(internal_msg)
       }
       _ => Err(GenericError::NoKeyProvided {})?,
@@ -247,7 +248,6 @@ pub fn validate_public_token(token: String, footer: Option<String>, key: PasetoP
 #[cfg(test)]
 mod unit_tests {
   use super::*;
-  use crate::tokens::builder::*;
 
   use ring::rand::SystemRandom;
   use serde_json::json;
@@ -314,7 +314,7 @@ mod unit_tests {
 
     let sys_rand = SystemRandom::new();
     let key_pkcs8 = Ed25519KeyPair::generate_pkcs8(&sys_rand).expect("Failed to generate pkcs8 key!");
-    let as_untrusted = UntrustedInput::from(&key_pkcs8);
+    let as_untrusted = UntrustedInput::from(key_pkcs8.as_ref());
     let as_key = Ed25519KeyPair::from_pkcs8(as_untrusted.clone()).expect("Failed to parse keypair");
     let cloned_key = Ed25519KeyPair::from_pkcs8(as_untrusted).expect("Failed to parse keypair");
 
@@ -346,7 +346,7 @@ mod unit_tests {
 
     let sys_rand = SystemRandom::new();
     let key_pkcs8 = Ed25519KeyPair::generate_pkcs8(&sys_rand).expect("Failed to generate pkcs8 key!");
-    let as_untrusted = UntrustedInput::from(&key_pkcs8);
+    let as_untrusted = UntrustedInput::from(key_pkcs8.as_ref());
     let as_key = Ed25519KeyPair::from_pkcs8(as_untrusted.clone()).expect("Failed to parse keypair");
     let cloned_key = Ed25519KeyPair::from_pkcs8(as_untrusted).expect("Failed to parse keypair");
 

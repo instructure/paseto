@@ -1,3 +1,8 @@
+## 1.0.3
+
+* Bump Dependencies to latest version.
+* Sodiumoxide segfault on mac-os-x has been fixed.
+
 ## 1.0.2
 
 * Bump Dependencies to latest versions.
