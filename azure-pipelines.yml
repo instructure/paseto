@@ -19,6 +19,9 @@ strategy:
 pool:
   vmImage: $(imageName)
 
+variables:
+  VCPKGRS_DYNAMIC: 1
+
 steps:
   - script: |
       curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain $RUSTUP_TOOLCHAIN
