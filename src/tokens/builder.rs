@@ -1,18 +1,18 @@
 use crate::errors::{GenericError, RsaKeyErrors};
 
-#[cfg(feature = "v1")]
-use crate::v1::public_paseto as V1Public;
 #[cfg(all(not(feature = "v2"), feature = "v1"))]
 use crate::v1::local_paseto as V1Local;
+#[cfg(feature = "v1")]
+use crate::v1::public_paseto as V1Public;
 #[cfg(feature = "v2")]
 use crate::v2::{local_paseto as V2Local, public_paseto as V2Public};
 
 use chrono::prelude::*;
 use failure::Error;
-#[cfg(feature = "v1")]
-use ring::signature::RsaKeyPair;
 #[cfg(feature = "v2")]
 use ring::signature::Ed25519KeyPair;
+#[cfg(feature = "v1")]
+use ring::signature::RsaKeyPair;
 use serde_json::{json, to_string, Value};
 #[cfg(feature = "v1")]
 use untrusted::Input as UntrustedInput;
@@ -100,7 +100,7 @@ impl PasetoBuilder {
         return Err(RsaKeyErrors::InvalidKey {})?;
       }
       let key_pair = Arc::new(key_pair.unwrap());
-      //return V1Public(strd_msg, self.footer, &mut signing_state);
+      return V1Public(strd_msg, self.footer, &mut signing_state);
     } else {
       return Err(GenericError::NoKeyProvided {})?;
     }
@@ -243,7 +243,8 @@ mod unit_test {
       token,
       Some(String::from("footer")),
       &mut Vec::from("YELLOW SUBMARINE, BLACK WIZARDRY".as_bytes()),
-    ).expect("Failed to decrypt token constructed with builder!");
+    )
+    .expect("Failed to decrypt token constructed with builder!");
 
     let parsed: Value = ParseJson(&decrypted_token).expect("Failed to parse finalized token as json!");
 

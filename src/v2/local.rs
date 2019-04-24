@@ -7,8 +7,8 @@ use base64::{decode_config, encode_config, URL_SAFE_NO_PAD};
 use failure::Error;
 use ring::constant_time::verify_slices_are_equal as ConstantTimeEquals;
 use ring::rand::{SecureRandom, SystemRandom};
+use sodiumoxide::crypto::aead::xchacha20poly1305_ietf::{open as Decrypt, seal as Encrypt, Key, Nonce};
 use sodiumoxide::crypto::generichash::State as GenericHashState;
-use sodiumoxide::crypto::aead::xchacha20poly1305_ietf::{Key, Nonce, seal as Encrypt, open as Decrypt};
 
 /// Encrypt a "v2.local" pasesto token.
 ///
@@ -27,7 +27,12 @@ pub fn local_paseto(msg: String, footer: Option<String>, key: &mut [u8]) -> Resu
 /// `footer` - The footer to add.
 /// `nonce_key` - The key to the nonce, should be securely generated.
 /// `key` - The key to encrypt the message with.
-fn underlying_local_paseto(msg: String, footer: Option<String>, nonce_key: [u8; 24], key: &mut [u8]) -> Result<String, Error> {
+fn underlying_local_paseto(
+  msg: String,
+  footer: Option<String>,
+  nonce_key: [u8; 24],
+  key: &mut [u8],
+) -> Result<String, Error> {
   let header = String::from("v2.local.");
   let footer_frd = footer.unwrap_or(String::default());
   // Specify result type to give rust compiler hints on types.
@@ -55,7 +60,7 @@ fn underlying_local_paseto(msg: String, footer: Option<String>, nonce_key: [u8; 
   let (nonce, nonce_vec) = res?;
   let key_obj = Key::from_slice(key);
   if key_obj.is_none() {
-    return Err(SodiumErrors::InvalidKey {})?
+    return Err(SodiumErrors::InvalidKey {})?;
   }
   let key_obj = key_obj.unwrap();
 
@@ -64,12 +69,7 @@ fn underlying_local_paseto(msg: String, footer: Option<String>, nonce_key: [u8; 
 
   let pre_auth = pae(vec![header_as_vec, nonce_vec.clone(), footer_as_vec]);
 
-  let crypted = Encrypt(
-    msg.as_bytes(),
-    Some(pre_auth.as_ref()),
-    &nonce,
-    &key_obj
-  );
+  let crypted = Encrypt(msg.as_bytes(), Some(pre_auth.as_ref()), &nonce, &key_obj);
 
   let mut n_and_c = Vec::new();
   n_and_c.extend_from_slice(&nonce_vec);
@@ -134,12 +134,7 @@ pub fn decrypt_paseto(token: String, footer: Option<String>, key: &mut [u8]) -> 
   let nonce_obj = nonce_obj.unwrap();
   let key_obj = key_obj.unwrap();
 
-  let decrypted = Decrypt(
-    ciphertext,
-    Some(pre_auth.as_ref()),
-    &nonce_obj,
-    &key_obj
-  );
+  let decrypted = Decrypt(ciphertext, Some(pre_auth.as_ref()), &nonce_obj, &key_obj);
   if decrypted.is_err() {
     return Err(SodiumErrors::FunctionError {})?;
   }

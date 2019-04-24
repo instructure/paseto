@@ -3,15 +3,9 @@ use failure_derive::*;
 #[derive(Debug, Fail)]
 pub enum SodiumErrors {
   #[fail(display = "invalid key size, needed: {} got: {}", size_needed, size_provided)]
-  InvalidKeySize {
-    size_provided: usize,
-    size_needed: usize,
-  },
+  InvalidKeySize { size_provided: usize, size_needed: usize },
   #[fail(display = "invalid nonce size, needed: {} got: {}", size_needed, size_provided)]
-  InvalidNonceSize {
-    size_provided: usize,
-    size_needed: usize
-  },
+  InvalidNonceSize { size_provided: usize, size_needed: usize },
   #[fail(display = "Invalid key for libsodium!")]
   InvalidKey {},
   #[fail(display = "Function call to C Sodium Failed.")]
