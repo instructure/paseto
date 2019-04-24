@@ -7,7 +7,7 @@ use crate::pae::pae;
 use base64::{decode_config, encode_config, URL_SAFE_NO_PAD};
 use failure::Error;
 use ring::constant_time::verify_slices_are_equal as ConstantTimeEquals;
-use ring::signature::{ED25519, Ed25519KeyPair, verify as PubKeyVerify};
+use ring::signature::{verify as PubKeyVerify, Ed25519KeyPair, ED25519};
 use untrusted::Input as UntrustedInput;
 
 /// Sign a "v2.public" paseto token.
@@ -82,12 +82,7 @@ pub fn verify_paseto(token: String, footer: Option<String>, public_key: &[u8]) -
   let sig_as_untrusted = UntrustedInput::from(sig);
   let pae_as_untrusted = UntrustedInput::from(&pre_auth);
 
-  PubKeyVerify(
-    &ED25519,
-    pk_as_untrusted,
-    pae_as_untrusted,
-    sig_as_untrusted
-  )?;
+  PubKeyVerify(&ED25519, pk_as_untrusted, pae_as_untrusted, sig_as_untrusted)?;
 
   Ok(String::from_utf8(Vec::from(msg))?)
 }
@@ -115,7 +110,8 @@ mod unit_tests {
       String::from("{\"data\": \"yo bro\", \"expires\": \"2018-01-01T00:00:00+00:00\"}"),
       None,
       &as_key,
-    ).expect("Failed to public encode json blob with no footer!");
+    )
+    .expect("Failed to public encode json blob with no footer!");
 
     assert!(public_token_one.starts_with("v2.public."));
     assert!(public_token_two.starts_with("v2.public."));
@@ -132,7 +128,11 @@ mod unit_tests {
       String::from("{\"data\": \"yo bro\", \"expires\": \"2018-01-01T00:00:00+00:00\"}")
     );
 
-    let should_not_verify_one = verify_paseto(public_token_one, Some(String::from("data")), as_key.public_key().as_ref());
+    let should_not_verify_one = verify_paseto(
+      public_token_one,
+      Some(String::from("data")),
+      as_key.public_key().as_ref(),
+    );
 
     // Verify if it doesn't have a footer in public that it won't pass a verification with a footer.
     assert!(should_not_verify_one.is_err());
@@ -144,13 +144,22 @@ mod unit_tests {
       String::from("{\"data\": \"yo bro\", \"expires\": \"2018-01-01T00:00:00+00:00\"}"),
       Some(String::from("footer")),
       &as_key,
-    ).expect("Failed to public encode json blob with footer!");
+    )
+    .expect("Failed to public encode json blob with footer!");
 
     assert!(public_token_three.starts_with("v2.public."));
     assert!(public_token_four.starts_with("v2.public."));
 
-    let verified_three = verify_paseto(public_token_three.clone(), Some(String::from("footer")), as_key.public_key().as_ref());
-    let verified_four = verify_paseto(public_token_four, Some(String::from("footer")), as_key.public_key().as_ref());
+    let verified_three = verify_paseto(
+      public_token_three.clone(),
+      Some(String::from("footer")),
+      as_key.public_key().as_ref(),
+    );
+    let verified_four = verify_paseto(
+      public_token_four,
+      Some(String::from("footer")),
+      as_key.public_key().as_ref(),
+    );
 
     // Verify the footer tokens.
     assert!(verified_three.is_ok());
@@ -163,7 +172,11 @@ mod unit_tests {
 
     // Validate no footer + invalid footer both fail on tokens encode with footer.
     let should_not_verify_two = verify_paseto(public_token_three.clone(), None, as_key.public_key().as_ref());
-    let should_not_verify_three = verify_paseto(public_token_three, Some(String::from("bleh")), as_key.public_key().as_ref());
+    let should_not_verify_three = verify_paseto(
+      public_token_three,
+      Some(String::from("bleh")),
+      as_key.public_key().as_ref(),
+    );
 
     assert!(should_not_verify_two.is_err());
     assert!(should_not_verify_three.is_err());

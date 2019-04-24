@@ -39,6 +39,7 @@ fn main() {
     token,
     Some(String::from("key-id:gandalf0")),
     paseto::tokens::PasetoPublicKey::ED25519KeyPair(cloned_key),
-  ).expect("Failed to validate token!");
+  )
+  .expect("Failed to validate token!");
   println!("{:?}", verified_token);
 }

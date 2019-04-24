@@ -1,8 +1,8 @@
 //! An implementation of paseto v1 "local" tokens, or tokens encrypted using a shared secret.
 
 use crate::errors::GenericError;
-use crate::v1::get_nonce::calculate_hashed_nonce;
 use crate::pae::pae;
+use crate::v1::get_nonce::calculate_hashed_nonce;
 
 use base64::{decode_config, encode_config, URL_SAFE_NO_PAD};
 use failure::Error;
@@ -30,7 +30,12 @@ pub fn local_paseto(msg: String, footer: Option<String>, key: &[u8]) -> Result<S
 /// `footer` - The optional footer.
 /// `random_nonce` - The random nonce.
 /// `key` - The key used for encryption.
-fn underlying_local_paseto(msg: String, footer: Option<String>, random_nonce: &[u8], key: &[u8]) -> Result<String, Error> {
+fn underlying_local_paseto(
+  msg: String,
+  footer: Option<String>,
+  random_nonce: &[u8],
+  key: &[u8],
+) -> Result<String, Error> {
   let header = String::from("v1.local.");
   let footer_frd = footer.unwrap_or(String::default());
   let true_nonce = calculate_hashed_nonce(msg.as_bytes(), random_nonce);
@@ -160,7 +165,8 @@ mod unit_tests {
       String::from("{\"data\": \"yo bro\", \"expires\": \"2018-01-01T00:00:00+00:00\"}"),
       None,
       &key_buff,
-    ).expect("Failed to encrypt V1 Paseto Json BLOB");
+    )
+    .expect("Failed to encrypt V1 Paseto Json BLOB");
 
     assert!(message_a.starts_with("v1.local."));
     assert!(message_b.starts_with("v1.local."));
@@ -184,7 +190,8 @@ mod unit_tests {
       String::from("{\"data\": \"yo bro\", \"expires\": \"2018-01-01T00:00:00+00:00\"}"),
       Some(String::from("data")),
       &key_buff,
-    ).expect("Failed to encrypt V1 Paseto Json blob with footer!");
+    )
+    .expect("Failed to encrypt V1 Paseto Json blob with footer!");
 
     assert!(message_c.starts_with("v1.local."));
     assert!(message_d.starts_with("v1.local."));

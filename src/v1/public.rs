@@ -8,7 +8,7 @@ use base64::{decode_config, encode_config, URL_SAFE_NO_PAD};
 use failure::Error;
 use ring::constant_time::verify_slices_are_equal as ConstantTimeEquals;
 use ring::rand::SystemRandom;
-use ring::signature::{RSA_PSS_2048_8192_SHA384, RSA_PSS_SHA384, RsaKeyPair, verify as PubKeyVerify};
+use ring::signature::{verify as PubKeyVerify, RsaKeyPair, RSA_PSS_2048_8192_SHA384, RSA_PSS_SHA384};
 use untrusted::Input as UntrustedInput;
 
 /// Sign a "v1.public" paseto token.
@@ -94,7 +94,7 @@ pub fn verify_paseto(token: String, footer: Option<String>, public_key: &[u8]) -
     &RSA_PSS_2048_8192_SHA384,
     pk_as_untrusted,
     pae_as_untrusted,
-    sig_as_untrusted
+    sig_as_untrusted,
   )?;
 
   Ok(String::from_utf8(Vec::from(message))?)
@@ -122,7 +122,8 @@ mod unit_tests {
       String::from("{\"data\": \"yo bro\", \"expires\": \"2018-01-01T00:00:00+00:00\"}"),
       None,
       &mut key_pair,
-    ).expect("Failed to encode public paseto v1 json blob with no footer!");
+    )
+    .expect("Failed to encode public paseto v1 json blob with no footer!");
 
     let verified_one = verify_paseto(public_token_one.clone(), None, public_key)
       .expect("Failed to verify public paseto v1 msg with no footer!");
@@ -145,7 +146,8 @@ mod unit_tests {
       String::from("{\"data\": \"yo bro\", \"expires\": \"2018-01-01T00:00:00+00:00\"}"),
       Some(String::from("data")),
       &mut key_pair,
-    ).expect("Failed to encode public paseto v1 json blob with footer!");
+    )
+    .expect("Failed to encode public paseto v1 json blob with footer!");
 
     let verified_three = verify_paseto(public_token_three.clone(), Some(String::from("data")), public_key)
       .expect("Failed to verify public paseto v1 msg with footer!");

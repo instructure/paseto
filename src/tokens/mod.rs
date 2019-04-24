@@ -13,7 +13,7 @@ use failure::Error;
 #[cfg(feature = "v2")]
 use ring::signature::Ed25519KeyPair;
 use ring::signature::KeyPair;
-use serde_json::{Value as JsonValue, from_str as ParseJson};
+use serde_json::{from_str as ParseJson, Value as JsonValue};
 
 pub mod builder;
 pub use self::builder::*;
@@ -276,7 +276,8 @@ mod unit_tests {
       token,
       Some(String::from("footer")),
       Vec::from("YELLOW SUBMARINE, BLACK WIZARDRY".as_bytes()),
-    ).expect("Failed to validate token!");
+    )
+    .expect("Failed to validate token!");
   }
 
   #[test]
@@ -298,13 +299,12 @@ mod unit_tests {
       .build()
       .expect("Failed to construct paseto token w/ builder!");
 
-    assert!(
-      validate_local_token(
-        token,
-        Some(String::from("footer")),
-        Vec::from("YELLOW SUBMARINE, BLACK WIZARDRY".as_bytes())
-      ).is_err()
-    );
+    assert!(validate_local_token(
+      token,
+      Some(String::from("footer")),
+      Vec::from("YELLOW SUBMARINE, BLACK WIZARDRY".as_bytes())
+    )
+    .is_err());
   }
 
   #[test]
@@ -336,7 +336,8 @@ mod unit_tests {
       token,
       Some(String::from("footer")),
       PasetoPublicKey::ED25519KeyPair(cloned_key),
-    ).expect("Failed to validate token!");
+    )
+    .expect("Failed to validate token!");
   }
 
   #[test]
@@ -364,12 +365,11 @@ mod unit_tests {
       .build()
       .expect("Failed to construct paseto token w/ builder!");
 
-    assert!(
-      validate_public_token(
-        token,
-        Some(String::from("footer")),
-        PasetoPublicKey::ED25519KeyPair(cloned_key)
-      ).is_err()
-    );
+    assert!(validate_public_token(
+      token,
+      Some(String::from("footer")),
+      PasetoPublicKey::ED25519KeyPair(cloned_key)
+    )
+    .is_err());
   }
 }
