@@ -1,3 +1,10 @@
+## 1.0.X (Unreleased)
+
+* Start running CI on Macs.
+* Start running CI on nightly/beta builds.
+* Start running CI every night.
+* Upgrade openssl.
+
 ## 1.0.3
 
 * Bump Dependencies to latest version.
