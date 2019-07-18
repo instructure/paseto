@@ -4,7 +4,7 @@ description = "An alternative token format to JWT"
 version = "1.0.3"
 license = "MIT"
 authors = [
-  "Eric <ecoan@instructure.com>"
+  "Cynthia <ccoan@instructure.com>"
 ]
 edition = "2018"
 
