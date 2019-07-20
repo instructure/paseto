@@ -9,8 +9,8 @@ use base64::{decode_config, encode_config, URL_SAFE_NO_PAD};
 use failure::Error;
 use openssl::symm;
 use ring::constant_time::verify_slices_are_equal as ConstantTimeEquals;
-use ring::hkdf::{HKDF_SHA384, Salt};
-use ring::hmac::{HMAC_SHA384, Key, sign};
+use ring::hkdf::{Salt, HKDF_SHA384};
+use ring::hmac::{sign, Key, HMAC_SHA384};
 use ring::rand::{SecureRandom, SystemRandom};
 
 /// Encrypt a "v1.local" paseto token.
@@ -51,7 +51,7 @@ fn underlying_local_paseto(
 
   let ek_info = ["paseto-encryption-key".as_bytes()];
   let ak_info = ["paseto-auth-key-for-aead".as_bytes()];
-  
+
   let extracted = hkdf_salt.extract(key);
   let ek_result = extracted.expand(&ek_info, CustomKeyWrapper(32));
   let ak_result = extracted.expand(&ak_info, CustomKeyWrapper(32));
@@ -138,7 +138,7 @@ pub fn decrypt_paseto(token: String, footer: Option<String>, key: &[u8]) -> Resu
 
   let mut ek = [0; 32];
   let mut ak = [0; 32];
-  
+
   let extracted = hkdf_salt.extract(key);
   let ek_info = ["paseto-encryption-key".as_bytes()];
   let ak_info = ["paseto-auth-key-for-aead".as_bytes()];

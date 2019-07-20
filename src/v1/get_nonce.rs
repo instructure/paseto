@@ -1,6 +1,6 @@
 //! An implementation of "get_nonce" for version one of paseto tokens.
 
-use ring::hmac::{HMAC_SHA384, Key, sign};
+use ring::hmac::{sign, Key, HMAC_SHA384};
 
 /// An implementation of "get_nonce" from the docs in paseto version one.
 ///

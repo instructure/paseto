@@ -7,7 +7,7 @@ use crate::pae::pae;
 use base64::{decode_config, encode_config, URL_SAFE_NO_PAD};
 use failure::Error;
 use ring::constant_time::verify_slices_are_equal as ConstantTimeEquals;
-use ring::signature::{Ed25519KeyPair, ED25519, UnparsedPublicKey};
+use ring::signature::{Ed25519KeyPair, UnparsedPublicKey, ED25519};
 
 /// Sign a "v2.public" paseto token.
 ///
