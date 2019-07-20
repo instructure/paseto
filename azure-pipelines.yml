@@ -28,7 +28,7 @@ steps:
     displayName: Install Rustfmt
   - script: cargo fmt --all -- --check
     displayName: Run rustfmt
-  - script: cargo build --all
+  - script: cargo clean && (rm -f Cargo.lock || true) && rustc --version && cargo --version && cargo build --all
     displayName: Cargo build
   - script: cargo test --all
     displayName: Cargo test
