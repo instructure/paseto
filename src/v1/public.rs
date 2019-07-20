@@ -8,8 +8,7 @@ use base64::{decode_config, encode_config, URL_SAFE_NO_PAD};
 use failure::Error;
 use ring::constant_time::verify_slices_are_equal as ConstantTimeEquals;
 use ring::rand::SystemRandom;
-use ring::signature::{verify as PubKeyVerify, RsaKeyPair, RSA_PSS_2048_8192_SHA384, RSA_PSS_SHA384};
-use untrusted::Input as UntrustedInput;
+use ring::signature::{RsaKeyPair, UnparsedPublicKey, RSA_PSS_2048_8192_SHA384, RSA_PSS_SHA384};
 
 /// Sign a "v1.public" paseto token.
 ///
@@ -29,7 +28,10 @@ pub fn public_paseto(msg: String, footer: Option<String>, key_pair: &mut RsaKeyP
   let random = SystemRandom::new();
 
   let mut signed_msg = [0; 256];
-  key_pair.sign(&RSA_PSS_SHA384, &random, &pre_auth, &mut signed_msg)?;
+  let sign_res = key_pair.sign(&RSA_PSS_SHA384, &random, &pre_auth, &mut signed_msg);
+  if sign_res.is_err() {
+    return Err(RsaKeyErrors::SignError {})?;
+  }
 
   let mut combined_vec = Vec::new();
   combined_vec.extend_from_slice(msg.as_bytes());
@@ -86,16 +88,11 @@ pub fn verify_paseto(token: String, footer: Option<String>, public_key: &[u8]) -
     Vec::from(footer_as_str.as_bytes()),
   ]);
 
-  let pk_as_untrusted = UntrustedInput::from(public_key);
-  let sig_as_untrusted = UntrustedInput::from(sig);
-  let pae_as_untrusted = UntrustedInput::from(&pre_auth);
-
-  PubKeyVerify(
-    &RSA_PSS_2048_8192_SHA384,
-    pk_as_untrusted,
-    pae_as_untrusted,
-    sig_as_untrusted,
-  )?;
+  let pk_unparsed = UnparsedPublicKey::new(&RSA_PSS_2048_8192_SHA384, public_key);
+  let verify_result = pk_unparsed.verify(&pre_auth, sig);
+  if verify_result.is_err() {
+    return Err(GenericError::InvalidToken {})?;
+  }
 
   Ok(String::from_utf8(Vec::from(message))?)
 }
@@ -110,9 +107,8 @@ mod unit_tests {
   fn test_v1_public() {
     let private_key = include_bytes!("signature_rsa_example_private_key.der");
     let public_key = include_bytes!("signature_rsa_example_public_key.der");
-    let private_key_pkcs = UntrustedInput::from(private_key);
 
-    let mut key_pair = RsaKeyPair::from_der(private_key_pkcs).expect("Bad Private Key pkcs!");
+    let mut key_pair = RsaKeyPair::from_der(private_key).expect("Bad Private Key pkcs!");
 
     // Test keys without footers.
     let public_token_one = public_paseto(String::from("msg"), None, &mut key_pair)

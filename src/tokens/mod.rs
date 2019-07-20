@@ -251,7 +251,6 @@ mod unit_tests {
 
   use ring::rand::SystemRandom;
   use serde_json::json;
-  use untrusted::Input as UntrustedInput;
 
   #[test]
   fn valid_enc_token_passes_test() {
@@ -314,9 +313,8 @@ mod unit_tests {
 
     let sys_rand = SystemRandom::new();
     let key_pkcs8 = Ed25519KeyPair::generate_pkcs8(&sys_rand).expect("Failed to generate pkcs8 key!");
-    let as_untrusted = UntrustedInput::from(key_pkcs8.as_ref());
-    let as_key = Ed25519KeyPair::from_pkcs8(as_untrusted.clone()).expect("Failed to parse keypair");
-    let cloned_key = Ed25519KeyPair::from_pkcs8(as_untrusted).expect("Failed to parse keypair");
+    let as_key = Ed25519KeyPair::from_pkcs8(key_pkcs8.as_ref()).expect("Failed to parse keypair");
+    let cloned_key = Ed25519KeyPair::from_pkcs8(key_pkcs8.as_ref()).expect("Failed to parse keypair");
 
     let token = PasetoBuilder::new()
       .set_ed25519_key(as_key)
@@ -347,9 +345,8 @@ mod unit_tests {
 
     let sys_rand = SystemRandom::new();
     let key_pkcs8 = Ed25519KeyPair::generate_pkcs8(&sys_rand).expect("Failed to generate pkcs8 key!");
-    let as_untrusted = UntrustedInput::from(key_pkcs8.as_ref());
-    let as_key = Ed25519KeyPair::from_pkcs8(as_untrusted.clone()).expect("Failed to parse keypair");
-    let cloned_key = Ed25519KeyPair::from_pkcs8(as_untrusted).expect("Failed to parse keypair");
+    let as_key = Ed25519KeyPair::from_pkcs8(key_pkcs8.as_ref()).expect("Failed to parse keypair");
+    let cloned_key = Ed25519KeyPair::from_pkcs8(key_pkcs8.as_ref()).expect("Failed to parse keypair");
 
     let token = PasetoBuilder::new()
       .set_ed25519_key(as_key)

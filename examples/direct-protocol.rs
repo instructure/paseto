@@ -1,5 +1,3 @@
-extern crate paseto;
-
 fn main() {
   let key = "YELLOW SUBMARINE, BLACK WIZARDRY".as_bytes();
   let mut key_mut = Vec::from("YELLOW SUBMARINE, BLACK WIZARDRY".as_bytes());

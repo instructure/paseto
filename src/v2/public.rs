@@ -7,8 +7,7 @@ use crate::pae::pae;
 use base64::{decode_config, encode_config, URL_SAFE_NO_PAD};
 use failure::Error;
 use ring::constant_time::verify_slices_are_equal as ConstantTimeEquals;
-use ring::signature::{verify as PubKeyVerify, Ed25519KeyPair, ED25519};
-use untrusted::Input as UntrustedInput;
+use ring::signature::{Ed25519KeyPair, ED25519, UnparsedPublicKey};
 
 /// Sign a "v2.public" paseto token.
 ///
@@ -78,11 +77,11 @@ pub fn verify_paseto(token: String, footer: Option<String>, public_key: &[u8]) -
     Vec::from(footer_as_str.as_bytes()),
   ]);
 
-  let pk_as_untrusted = UntrustedInput::from(public_key);
-  let sig_as_untrusted = UntrustedInput::from(sig);
-  let pae_as_untrusted = UntrustedInput::from(&pre_auth);
-
-  PubKeyVerify(&ED25519, pk_as_untrusted, pae_as_untrusted, sig_as_untrusted)?;
+  let pk_unparsed = UnparsedPublicKey::new(&ED25519, public_key);
+  let verify_res = pk_unparsed.verify(&pre_auth, sig);
+  if verify_res.is_err() {
+    return Err(GenericError::InvalidToken {})?;
+  }
 
   Ok(String::from_utf8(Vec::from(msg))?)
 }
@@ -98,8 +97,7 @@ mod unit_tests {
   fn paseto_public_verify() {
     let sys_rand = SystemRandom::new();
     let key_pkcs8 = Ed25519KeyPair::generate_pkcs8(&sys_rand).expect("Failed to generate pkcs8 key!");
-    let as_untrusted = UntrustedInput::from(key_pkcs8.as_ref());
-    let as_key = Ed25519KeyPair::from_pkcs8(as_untrusted).expect("Failed to parse keypair");
+    let as_key = Ed25519KeyPair::from_pkcs8(key_pkcs8.as_ref()).expect("Failed to parse keypair");
 
     // Test messages without footers.
     let public_token_one =

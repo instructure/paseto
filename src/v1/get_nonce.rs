@@ -1,14 +1,13 @@
 //! An implementation of "get_nonce" for version one of paseto tokens.
 
-use ring::digest::SHA384;
-use ring::hmac::{sign, SigningKey};
+use ring::hmac::{HMAC_SHA384, Key, sign};
 
 /// An implementation of "get_nonce" from the docs in paseto version one.
 ///
 /// This function is to ensure that an RNG failure does not result in a
 /// nonce-misuse condition that breaks the security of our stream cipher.
 pub fn calculate_hashed_nonce(msg: &[u8], random_nonce: &[u8]) -> Vec<u8> {
-  let mac_key = SigningKey::new(&SHA384, random_nonce);
+  let mac_key = Key::new(HMAC_SHA384, random_nonce);
   let signed = sign(&mac_key, msg);
   Vec::from(signed.as_ref()[0..32].to_owned())
 }

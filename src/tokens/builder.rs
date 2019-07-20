@@ -14,8 +14,6 @@ use ring::signature::Ed25519KeyPair;
 #[cfg(feature = "v1")]
 use ring::signature::RsaKeyPair;
 use serde_json::{json, to_string, Value};
-#[cfg(feature = "v1")]
-use untrusted::Input as UntrustedInput;
 
 use std::collections::HashMap;
 
@@ -60,8 +58,7 @@ impl PasetoBuilder {
       return V2Public(strd_msg, self.footer, &ed_key_pair);
     } else if self.rsa_key.is_some() {
       let the_rsa_key = self.rsa_key.unwrap();
-      let private_key_der = UntrustedInput::from(&the_rsa_key);
-      let key_pair = RsaKeyPair::from_der(private_key_der);
+      let key_pair = RsaKeyPair::from_der(&the_rsa_key);
       if key_pair.is_err() {
         return Err(RsaKeyErrors::InvalidKey {})?;
       }
@@ -94,8 +91,7 @@ impl PasetoBuilder {
       return V1Local(strd_msg, self.footer, &mut self.enc_key);
     } else if self.rsa_key.is_some() {
       let the_rsa_key = self.rsa_key.unwrap();
-      let private_key_der = UntrustedInput::from(&the_rsa_key);
-      let key_pair = RsaKeyPair::from_der(private_key_der);
+      let key_pair = RsaKeyPair::from_der(&the_rsa_key);
       if key_pair.is_err() {
         return Err(RsaKeyErrors::InvalidKey {})?;
       }

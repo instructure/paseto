@@ -1,14 +1,7 @@
-extern crate chrono;
-extern crate paseto;
-extern crate ring;
-#[macro_use]
-extern crate serde_json;
-extern crate untrusted;
-
 use chrono::prelude::*;
 use ring::rand::SystemRandom;
 use ring::signature::Ed25519KeyPair;
-use untrusted::Input as UntrustedInput;
+use serde_json::json;
 
 fn main() {
   let current_date_time = Utc::now();
@@ -16,9 +9,8 @@ fn main() {
 
   let sys_rand = SystemRandom::new();
   let key_pkcs8 = Ed25519KeyPair::generate_pkcs8(&sys_rand).expect("Failed to generate pkcs8 key!");
-  let as_untrusted = UntrustedInput::from(&key_pkcs8.as_ref());
-  let as_key = Ed25519KeyPair::from_pkcs8(as_untrusted.clone()).expect("Failed to parse keypair");
-  let cloned_key = Ed25519KeyPair::from_pkcs8(as_untrusted).expect("Failed to parse keypair");
+  let as_key = Ed25519KeyPair::from_pkcs8(key_pkcs8.as_ref()).expect("Failed to parse keypair");
+  let cloned_key = Ed25519KeyPair::from_pkcs8(key_pkcs8.as_ref()).expect("Failed to parse keypair");
 
   let token = paseto::tokens::PasetoBuilder::new()
     .set_ed25519_key(as_key)

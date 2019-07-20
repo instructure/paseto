@@ -21,12 +21,6 @@ Simply add this crate to your `Cargo.toml` file:
 paseto = "^1.0.3"
 ```
 
-and then in your crate root:
-
-```rust
-extern crate paseto;
-```
-
 ## Examples ##
 
 The `examples/` directory covers the following use cases:

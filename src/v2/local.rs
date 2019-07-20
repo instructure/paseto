@@ -16,7 +16,10 @@ use sodiumoxide::crypto::generichash::State as GenericHashState;
 pub fn local_paseto(msg: String, footer: Option<String>, key: &mut [u8]) -> Result<String, Error> {
   let rng = SystemRandom::new();
   let mut buff: [u8; 24] = [0u8; 24];
-  rng.fill(&mut buff)?;
+  let res = rng.fill(&mut buff);
+  if res.is_err() {
+    return Err(GenericError::RandomError {})?;
+  }
 
   underlying_local_paseto(msg, footer, buff, key)
 }

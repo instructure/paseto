@@ -3,14 +3,14 @@
 use crate::errors::GenericError;
 use crate::pae::pae;
 use crate::v1::get_nonce::calculate_hashed_nonce;
+use crate::v1::key_wrapper::CustomKeyWrapper;
 
 use base64::{decode_config, encode_config, URL_SAFE_NO_PAD};
 use failure::Error;
 use openssl::symm;
 use ring::constant_time::verify_slices_are_equal as ConstantTimeEquals;
-use ring::digest::SHA384;
-use ring::hkdf::extract_and_expand as HKDF;
-use ring::hmac::{sign, SigningKey};
+use ring::hkdf::{HKDF_SHA384, Salt};
+use ring::hmac::{HMAC_SHA384, Key, sign};
 use ring::rand::{SecureRandom, SystemRandom};
 
 /// Encrypt a "v1.local" paseto token.
@@ -19,7 +19,10 @@ use ring::rand::{SecureRandom, SystemRandom};
 pub fn local_paseto(msg: String, footer: Option<String>, key: &[u8]) -> Result<String, Error> {
   let rng = SystemRandom::new();
   let mut buff: [u8; 32] = [0u8; 32];
-  rng.fill(&mut buff)?;
+  let res = rng.fill(&mut buff);
+  if res.is_err() {
+    return Err(GenericError::RandomError {})?;
+  }
 
   underlying_local_paseto(msg, footer, &buff, key)
 }
@@ -41,12 +44,25 @@ fn underlying_local_paseto(
   let true_nonce = calculate_hashed_nonce(msg.as_bytes(), random_nonce);
 
   let (as_salt, ctr_nonce) = true_nonce.split_at(16);
-  let hkdf_salt = SigningKey::new(&SHA384, as_salt);
+  let hkdf_salt = Salt::new(HKDF_SHA384, as_salt);
 
   let mut ek = [0; 32];
   let mut ak = [0; 32];
-  HKDF(&hkdf_salt, key, "paseto-encryption-key".as_bytes(), &mut ek);
-  HKDF(&hkdf_salt, key, "paseto-auth-key-for-aead".as_bytes(), &mut ak);
+
+  let ek_info = ["paseto-encryption-key".as_bytes()];
+  let ak_info = ["paseto-auth-key-for-aead".as_bytes()];
+  
+  let extracted = hkdf_salt.extract(key);
+  let ek_result = extracted.expand(&ek_info, CustomKeyWrapper(32));
+  let ak_result = extracted.expand(&ak_info, CustomKeyWrapper(32));
+  if ek_result.is_err() || ak_result.is_err() {
+    return Err(GenericError::BadHkdf {})?;
+  }
+  let ek_fill_result = ek_result.unwrap().fill(&mut ek);
+  let ak_fill_result = ak_result.unwrap().fill(&mut ak);
+  if ek_fill_result.is_err() || ak_fill_result.is_err() {
+    return Err(GenericError::BadHkdf {})?;
+  }
 
   let cipher = symm::Cipher::aes_256_ctr();
   let crypted = symm::encrypt(cipher, &ek, Some(&ctr_nonce), msg.as_bytes())?;
@@ -58,7 +74,7 @@ fn underlying_local_paseto(
     Vec::from(footer_frd.as_bytes()),
   ]);
 
-  let mac_key = SigningKey::new(&SHA384, &ak);
+  let mac_key = Key::new(HMAC_SHA384, &ak);
   let signed = sign(&mac_key, &pre_auth);
   let raw_bytes_from_hmac = signed.as_ref();
 
@@ -118,12 +134,25 @@ pub fn decrypt_paseto(token: String, footer: Option<String>, key: &[u8]) -> Resu
 
   let nonce = Vec::from(nonce);
   let (as_salt, ctr_nonce) = nonce.split_at(16);
+  let hkdf_salt = Salt::new(HKDF_SHA384, as_salt);
 
   let mut ek = [0; 32];
   let mut ak = [0; 32];
-  let hkdf_salt = SigningKey::new(&SHA384, as_salt);
-  HKDF(&hkdf_salt, key, "paseto-encryption-key".as_bytes(), &mut ek);
-  HKDF(&hkdf_salt, key, "paseto-auth-key-for-aead".as_bytes(), &mut ak);
+  
+  let extracted = hkdf_salt.extract(key);
+  let ek_info = ["paseto-encryption-key".as_bytes()];
+  let ak_info = ["paseto-auth-key-for-aead".as_bytes()];
+
+  let ek_result = extracted.expand(&ek_info, CustomKeyWrapper(32));
+  let ak_result = extracted.expand(&ak_info, CustomKeyWrapper(32));
+  if ek_result.is_err() || ak_result.is_err() {
+    return Err(GenericError::BadHkdf {})?;
+  }
+  let ek_fill_result = ek_result.unwrap().fill(&mut ek);
+  let ak_fill_result = ak_result.unwrap().fill(&mut ak);
+  if ek_fill_result.is_err() || ak_fill_result.is_err() {
+    return Err(GenericError::BadHkdf {})?;
+  }
 
   let pre_auth = pae(vec![
     Vec::from("v1.local.".as_bytes()),
@@ -132,7 +161,7 @@ pub fn decrypt_paseto(token: String, footer: Option<String>, key: &[u8]) -> Resu
     Vec::from(footer_str.as_bytes()),
   ]);
 
-  let mac_key = SigningKey::new(&SHA384, &ak);
+  let mac_key = Key::new(HMAC_SHA384, &ak);
   let signed = sign(&mac_key, &pre_auth);
   let raw_bytes_from_hmac = signed.as_ref();
 

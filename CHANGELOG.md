@@ -4,6 +4,8 @@
 * Start running CI on nightly/beta builds.
 * Start running CI every night.
 * Upgrade openssl.
+* Upgrade Ring.
+* Remove Direct Dependncy on untrusted.
 
 ## 1.0.3
 

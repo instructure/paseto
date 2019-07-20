@@ -18,6 +18,8 @@ pub enum SodiumErrors {
 pub enum RsaKeyErrors {
   #[fail(display = "Invalid RSA Key Provided")]
   InvalidKey {},
+  #[fail(display = "Failed to generate signed RSA content")]
+  SignError {},
 }
 
 #[derive(Debug, Fail)]
@@ -28,4 +30,8 @@ pub enum GenericError {
   InvalidToken {},
   #[fail(display = "This token has an invalid footer.")]
   InvalidFooter {},
+  #[fail(display = "Failed to generate enough random bytes.")]
+  RandomError {},
+  #[fail(display = "Failed to perform HKDF")]
+  BadHkdf {},
 }

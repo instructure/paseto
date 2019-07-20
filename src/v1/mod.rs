@@ -4,6 +4,7 @@
 //! It is recommended you use the "tokens" module which provides these features out of the box.
 
 pub mod get_nonce;
+pub mod key_wrapper;
 
 pub mod local;
 pub use self::local::*;

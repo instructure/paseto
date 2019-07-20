@@ -1,9 +1,5 @@
-extern crate chrono;
-extern crate paseto;
-#[macro_use]
-extern crate serde_json;
-
 use chrono::prelude::*;
+use serde_json::json;
 
 fn main() {
   let current_date_time = Utc::now();
