@@ -1,4 +1,4 @@
-## 1.0.X (Unreleased)
+## 1.0.4
 
 * Start running CI on Macs.
 * Start running CI on nightly/beta builds.

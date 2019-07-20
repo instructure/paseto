@@ -1,7 +1,5 @@
 # Paseto Rust #
 
-[![Build Status](https://dev.azure.com/instructure-github/github-integration/_apis/build/status/instructure.paseto?branchName=master)](https://dev.azure.com/instructure-github/github-integration/_build/latest?definitionId=1&branchName=master)
-
 Paseto is everything you love about JOSE (JWT, JWE, JWS) without any of the [many design deficits that plague the JOSE standards][blog_post].
 This is directly adapted from the reference implemenation made by paragon-ie, which can be found: [HERE][reference_impl].
 
@@ -18,7 +16,7 @@ Simply add this crate to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-paseto = "^1.0.3"
+paseto = "^1.0.4"
 ```
 
 ## Examples ##
