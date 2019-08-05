@@ -8,7 +8,7 @@ action "Trigger Instructure.Paseto pipeline" {
   secrets = ["AZURE_DEVOPS_TOKEN"]
   env = {
     AZURE_DEVOPS_URL = "https://dev.azure.com/instructure-github"
-    AZURE_DEVOPS_PROJECT = "github-integration"
     AZURE_PIPELINE_NAME = "instructure.paseto"
+    AZURE_DEVOPS_PROJECT = "paseto"
   }
 }
