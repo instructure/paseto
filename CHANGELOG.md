@@ -1,3 +1,8 @@
+## Unreleased
+
+* Use newer github actions.
+* Remove Azure Pipelines.
+
 ## 1.0.5
 
 * Upgrade Ring
