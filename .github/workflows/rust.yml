@@ -23,6 +23,8 @@ jobs:
     runs-on: macOS-latest
     steps:
     - uses: actions/checkout@master
+    - name: Install rust
+      run: curl https://sh.rustup.rs -sSf | sh -s -- -y
     - name: Build
       run: cargo build --all --verbose
     - name: Run tests
