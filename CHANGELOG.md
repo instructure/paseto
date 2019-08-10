@@ -1,3 +1,7 @@
+## 1.0.5
+
+* Upgrade Ring
+
 ## 1.0.4
 
 * Start running CI on Macs.
