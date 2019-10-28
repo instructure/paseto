@@ -15,7 +15,7 @@ v2 = ["sodiumoxide"]
 easy_tokens = ["serde_json", "chrono"]
 
 [dependencies]
-base64 = "^0.10"
+base64 = "^0.11"
 chrono = { version = "^0.4", optional = true, features = ["serde"] }
 failure = "^0.1"
 failure_derive = "^0.1"
