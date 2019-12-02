@@ -2,6 +2,7 @@
 name = "paseto"
 description = "An alternative token format to JWT"
 version = "1.0.5"
+repository = "https://github.com/instructure/paseto"
 license = "MIT"
 authors = [
   "Cynthia Coan <ccoan@instructure.com>"
