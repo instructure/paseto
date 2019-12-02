@@ -25,6 +25,8 @@ pub enum PasetoPublicKey {
   RSAPublicKey(Vec<u8>),
   #[cfg(feature = "v2")]
   ED25519KeyPair(Ed25519KeyPair),
+  #[cfg(feature = "v2")]
+  ED25519PublicKey(Vec<u8>),
 }
 
 /// Validates a potential json data blob, returning a JsonValue.
@@ -38,7 +40,7 @@ pub enum PasetoPublicKey {
 ///   * jti
 ///   * issuedBy
 ///   * subject
-fn validate_potential_json_blob(data: String) -> Result<JsonValue, Error> {
+pub fn validate_potential_json_blob(data: String) -> Result<JsonValue, Error> {
   let value: JsonValue = ParseJson(&data)?;
 
   let validation = {
@@ -181,7 +183,11 @@ pub fn validate_public_token(token: String, footer: Option<String>, key: PasetoP
       PasetoPublicKey::ED25519KeyPair(key_pair) => {
         let internal_msg = V2Verify(token, footer, key_pair.public_key().as_ref())?;
         validate_potential_json_blob(internal_msg)
-      }
+      },
+      PasetoPublicKey::ED25519PublicKey(pub_key_contents) => {
+        let internal_msg = V2Verify(token, footer, &pub_key_contents)?;
+        validate_potential_json_blob(internal_msg)
+      },
       _ => Err(GenericError::NoKeyProvided {})?,
     };
   } else if token.starts_with("v1.public.") {
@@ -334,6 +340,38 @@ mod unit_tests {
       token,
       Some(String::from("footer")),
       PasetoPublicKey::ED25519KeyPair(cloned_key),
+    )
+    .expect("Failed to validate token!");
+  }
+
+  #[test]
+  fn validate_pub_key_only_v2() {
+    let current_date_time = Utc::now();
+    let dt = Utc.ymd(current_date_time.year() + 1, 7, 8).and_hms(9, 10, 11);
+
+    let sys_rand = SystemRandom::new();
+    let key_pkcs8 = Ed25519KeyPair::generate_pkcs8(&sys_rand).expect("Failed to generate pkcs8 key!");
+    let as_key = Ed25519KeyPair::from_pkcs8(key_pkcs8.as_ref()).expect("Failed to parse keypair");
+    let cloned_key = Ed25519KeyPair::from_pkcs8(key_pkcs8.as_ref()).expect("Failed to parse keypair");
+
+    let token = PasetoBuilder::new()
+      .set_ed25519_key(as_key)
+      .set_issued_at(None)
+      .set_expiration(dt)
+      .set_issuer(String::from("issuer"))
+      .set_audience(String::from("audience"))
+      .set_jti(String::from("jti"))
+      .set_not_before(Utc::now())
+      .set_subject(String::from("test"))
+      .set_claim(String::from("claim"), json!(String::from("data")))
+      .set_footer(String::from("footer"))
+      .build()
+      .expect("Failed to construct paseto token w/ builder!");
+
+    validate_public_token(
+      token,
+      Some(String::from("footer")),
+      PasetoPublicKey::ED25519PublicKey(Vec::from(cloned_key.public_key().as_ref())),
     )
     .expect("Failed to validate token!");
   }

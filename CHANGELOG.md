@@ -2,6 +2,8 @@
 
 * Use newer github actions.
 * Remove Azure Pipelines.
+* Allow TokenBuilder to just need a public key for validation.
+* Make JSON Payload Validation public so anyone can use it.
 
 ## 1.0.5
 
