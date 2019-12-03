@@ -1,4 +1,4 @@
-## Unreleased
+## 1.0.6
 
 * Use newer github actions.
 * Remove Azure Pipelines.

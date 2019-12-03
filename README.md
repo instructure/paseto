@@ -16,7 +16,7 @@ Simply add this crate to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-paseto = "^1.0.5"
+paseto = "^1.0.6"
 ```
 
 ## Examples ##
