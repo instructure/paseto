@@ -114,9 +114,9 @@ pub fn validate_potential_json_blob(data: String) -> Result<JsonValue, Error> {
 /// Because we validate these fields the resulting type must be a json object. If it's not
 /// please use the protocol impls directly.
 #[cfg(all(feature = "v1", feature = "v2"))]
-pub fn validate_local_token(token: String, footer: Option<String>, mut key: Vec<u8>) -> Result<JsonValue, Error> {
+pub fn validate_local_token(token: String, footer: Option<String>, key: Vec<u8>) -> Result<JsonValue, Error> {
   if token.starts_with("v2.local.") {
-    let token = V2Decrypt(token, footer, &mut key)?;
+    let token = V2Decrypt(token, footer, &key)?;
     return validate_potential_json_blob(token);
   } else if token.starts_with("v1.local.") {
     let token = V1Decrypt(token, footer, &key)?;
