@@ -1,3 +1,7 @@
+## Unreleased
+
+* Remove `mut` from the keys used by v2/local.rs.
+
 ## 1.0.6
 
 * Use newer github actions.
