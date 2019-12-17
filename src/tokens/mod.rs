@@ -183,11 +183,11 @@ pub fn validate_public_token(token: String, footer: Option<String>, key: PasetoP
       PasetoPublicKey::ED25519KeyPair(key_pair) => {
         let internal_msg = V2Verify(token, footer, key_pair.public_key().as_ref())?;
         validate_potential_json_blob(internal_msg)
-      },
+      }
       PasetoPublicKey::ED25519PublicKey(pub_key_contents) => {
         let internal_msg = V2Verify(token, footer, &pub_key_contents)?;
         validate_potential_json_blob(internal_msg)
-      },
+      }
       _ => Err(GenericError::NoKeyProvided {})?,
     };
   } else if token.starts_with("v1.public.") {

@@ -204,12 +204,7 @@ mod unit_tests {
       the_str
     );
 
-    let full_result = underlying_local_paseto(
-      String::from(""),
-      Some(String::from("Cuon Alpinus")),
-      [0; 24],
-      &full_key,
-    );
+    let full_result = underlying_local_paseto(String::from(""), Some(String::from("Cuon Alpinus")), [0; 24], &full_key);
     if full_result.is_err() {
       println!("Failed to encrypt Paseto!");
       println!("{:?}", full_result);
