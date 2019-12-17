@@ -10,7 +10,7 @@ use ring::rand::{SecureRandom, SystemRandom};
 use sodiumoxide::crypto::aead::xchacha20poly1305_ietf::{open as Decrypt, seal as Encrypt, Key, Nonce};
 use sodiumoxide::crypto::generichash::State as GenericHashState;
 
-/// Encrypt a "v2.local" pasesto token.
+/// Encrypt a "v2.local" paseto token.
 ///
 /// Returns a result of a string if encryption was successful.
 pub fn local_paseto(msg: String, footer: Option<String>, key: &mut [u8]) -> Result<String, Error> {
