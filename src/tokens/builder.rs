@@ -25,7 +25,7 @@ pub struct PasetoBuilder {
   encryption_key: Option<Vec<u8>>,
   /// The RSA Key pairs in DER format, for V1 Public Tokens.
   #[cfg(feature = "v1")]
-  rsa_key: Option<(Vec<u8>)>,
+  rsa_key: Option<Vec<u8>>,
   /// The ED25519 Key Pair, for V2 Public Tokens.
   #[cfg(feature = "v2")]
   ed_key: Option<Ed25519KeyPair>,
