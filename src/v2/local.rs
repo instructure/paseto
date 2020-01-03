@@ -13,7 +13,7 @@ use sodiumoxide::crypto::generichash::State as GenericHashState;
 /// Encrypt a "v2.local" paseto token.
 ///
 /// Returns a result of a string if encryption was successful.
-pub fn local_paseto(msg: String, footer: Option<String>, key: &[u8]) -> Result<String, Error> {
+pub fn local_paseto(msg: &str, footer: Option<String>, key: &[u8]) -> Result<String, Error> {
   let rng = SystemRandom::new();
   let mut buff: [u8; 24] = [0u8; 24];
   let res = rng.fill(&mut buff);
@@ -21,7 +21,7 @@ pub fn local_paseto(msg: String, footer: Option<String>, key: &[u8]) -> Result<S
     return Err(GenericError::RandomError {})?;
   }
 
-  underlying_local_paseto(msg, footer, buff, key)
+  underlying_local_paseto(msg, footer, &buff, key)
 }
 
 /// Performs the underlying encryption of a paseto token. Split for unit testing.
@@ -31,16 +31,16 @@ pub fn local_paseto(msg: String, footer: Option<String>, key: &[u8]) -> Result<S
 /// `nonce_key` - The key to the nonce, should be securely generated.
 /// `key` - The key to encrypt the message with.
 fn underlying_local_paseto(
-  msg: String,
+  msg: &str,
   footer: Option<String>,
-  nonce_key: [u8; 24],
+  nonce_key: &[u8; 24],
   key: &[u8],
 ) -> Result<String, Error> {
   let header = String::from("v2.local.");
   let footer_frd = footer.unwrap_or(String::default());
   // Specify result type to give rust compiler hints on types.
   let res: Result<(Nonce, Vec<u8>), Error> = {
-    if let Ok(mut state) = GenericHashState::new(24, Some(&nonce_key)) {
+    if let Ok(mut state) = GenericHashState::new(24, Some(nonce_key)) {
       if let Ok(_) = state.update(msg.as_bytes()) {
         if let Ok(finalized) = state.finalize() {
           let ref_finalized = finalized.as_ref();
@@ -97,7 +97,7 @@ fn underlying_local_paseto(
 /// `token`: The Token to decrypt.
 /// `footer`: The Optional footer to validate.
 /// `key`: The key to decrypt your Paseto.
-pub fn decrypt_paseto(token: String, footer: Option<String>, key: &[u8]) -> Result<String, Error> {
+pub fn decrypt_paseto(token: &str, footer: Option<String>, key: &[u8]) -> Result<String, Error> {
   let token_parts = token.split(".").map(|item| item.to_owned()).collect::<Vec<String>>();
   if token_parts.len() < 3 {
     return Err(GenericError::InvalidToken {})?;
@@ -154,7 +154,7 @@ mod unit_tests {
   fn paseto_empty_encrypt_verify() {
     let empty_key = [0; 32];
     let full_key = [255; 32];
-    let result = underlying_local_paseto(String::from(""), None, [0; 24], &empty_key);
+    let result = underlying_local_paseto("", None, &[0; 24], &empty_key);
     if result.is_err() {
       println!("Failed to encrypt Paseto!");
       println!("{:?}", result);
@@ -167,7 +167,7 @@ mod unit_tests {
       the_str
     );
 
-    let result_full = underlying_local_paseto(String::from(""), None, [0; 24], &full_key);
+    let result_full = underlying_local_paseto("", None, &[0; 24], &full_key);
     if result_full.is_err() {
       println!("Failed to encrypt Paseto!");
       println!("{:?}", result_full);
@@ -186,12 +186,7 @@ mod unit_tests {
     let empty_key = [0; 32];
     let full_key = [255; 32];
 
-    let result = underlying_local_paseto(
-      String::from(""),
-      Some(String::from("Cuon Alpinus")),
-      [0; 24],
-      &empty_key,
-    );
+    let result = underlying_local_paseto("", Some(String::from("Cuon Alpinus")), &[0; 24], &empty_key);
     if result.is_err() {
       println!("Failed to encrypt Paseto!");
       println!("{:?}", result);
@@ -204,7 +199,7 @@ mod unit_tests {
       the_str
     );
 
-    let full_result = underlying_local_paseto(String::from(""), Some(String::from("Cuon Alpinus")), [0; 24], &full_key);
+    let full_result = underlying_local_paseto("", Some(String::from("Cuon Alpinus")), &[0; 24], &full_key);
     if full_result.is_err() {
       println!("Failed to encrypt Paseto!");
       println!("{:?}", full_result);
@@ -223,12 +218,7 @@ mod unit_tests {
     let empty_key = [0; 32];
     let full_key = [255; 32];
 
-    let result = underlying_local_paseto(
-      String::from("Love is stronger than hate or fear"),
-      None,
-      [0; 24],
-      &empty_key,
-    );
+    let result = underlying_local_paseto("Love is stronger than hate or fear", None, &[0; 24], &empty_key);
     if result.is_err() {
       println!("Failed to encrypt Paseto!");
       println!("{:?}", result);
@@ -241,12 +231,7 @@ mod unit_tests {
       the_str
     );
 
-    let full_result = underlying_local_paseto(
-      String::from("Love is stronger than hate or fear"),
-      None,
-      [0; 24],
-      &full_key,
-    );
+    let full_result = underlying_local_paseto("Love is stronger than hate or fear", None, &[0; 24], &full_key);
     if full_result.is_err() {
       println!("Failed to encrypt Paseto!");
       println!("{:?}", full_result);
@@ -266,7 +251,7 @@ mod unit_tests {
     let empty_key = [0; 32];
 
     let result = local_paseto(
-      String::from("Love is stronger than hate or fear"),
+      "Love is stronger than hate or fear",
       Some(String::from("gwiz-bot")),
       &empty_key,
     );
@@ -279,7 +264,7 @@ mod unit_tests {
 
     println!("Paseto Full Round Token: [ {:?} ]", the_str);
 
-    let decrypted_result = decrypt_paseto(the_str, Some(String::from("gwiz-bot")), &empty_key);
+    let decrypted_result = decrypt_paseto(&the_str, Some(String::from("gwiz-bot")), &empty_key);
     if decrypted_result.is_err() {
       println!("Failed to decrypt Paseto!");
       println!("{:?}", decrypted_result);

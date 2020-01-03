@@ -16,7 +16,7 @@ use ring::rand::{SecureRandom, SystemRandom};
 /// Encrypt a "v1.local" paseto token.
 ///
 /// Returns a result of a string if encryption was successful.
-pub fn local_paseto(msg: String, footer: Option<String>, key: &[u8]) -> Result<String, Error> {
+pub fn local_paseto(msg: &str, footer: Option<String>, key: &[u8]) -> Result<String, Error> {
   let rng = SystemRandom::new();
   let mut buff: [u8; 32] = [0u8; 32];
   let res = rng.fill(&mut buff);
@@ -34,7 +34,7 @@ pub fn local_paseto(msg: String, footer: Option<String>, key: &[u8]) -> Result<S
 /// `random_nonce` - The random nonce.
 /// `key` - The key used for encryption.
 fn underlying_local_paseto(
-  msg: String,
+  msg: &str,
   footer: Option<String>,
   random_nonce: &[u8],
   key: &[u8],
@@ -102,7 +102,7 @@ fn underlying_local_paseto(
 /// `token` - The encrypted token.
 /// `footer` - The optional footer to validate against.
 /// `key` - The key used to encrypt the token.
-pub fn decrypt_paseto(token: String, footer: Option<String>, key: &[u8]) -> Result<String, Error> {
+pub fn decrypt_paseto(token: &str, footer: Option<String>, key: &[u8]) -> Result<String, Error> {
   let token_parts = token.split(".").map(|item| item.to_owned()).collect::<Vec<String>>();
   if token_parts.len() < 3 {
     return Err(GenericError::InvalidToken {})?;
@@ -187,11 +187,11 @@ mod unit_tests {
     rng.fill(&mut key_buff).expect("Failed to fill key_buff!");
 
     // Try to encrypt without footers.
-    let message_a = local_paseto(String::from("msg"), None, &key_buff).expect("Failed to encrypt V1 Paseto string");
+    let message_a = local_paseto("msg", None, &key_buff).expect("Failed to encrypt V1 Paseto string");
     // NOTE: This test is just ensuring we can encode a json object, remember these internal impls
     // don't check for expires being valid!
     let message_b = local_paseto(
-      String::from("{\"data\": \"yo bro\", \"expires\": \"2018-01-01T00:00:00+00:00\"}"),
+      "{\"data\": \"yo bro\", \"expires\": \"2018-01-01T00:00:00+00:00\"}",
       None,
       &key_buff,
     )
@@ -200,8 +200,8 @@ mod unit_tests {
     assert!(message_a.starts_with("v1.local."));
     assert!(message_b.starts_with("v1.local."));
 
-    let decrypted_a = decrypt_paseto(message_a.clone(), None, &key_buff).expect("Failed to decrypt V1 Paseto String");
-    let decrypted_b = decrypt_paseto(message_b, None, &key_buff).expect("Failed to decrypt V1 Paseto JSON Blob");
+    let decrypted_a = decrypt_paseto(&message_a, None, &key_buff).expect("Failed to decrypt V1 Paseto String");
+    let decrypted_b = decrypt_paseto(&message_b, None, &key_buff).expect("Failed to decrypt V1 Paseto JSON Blob");
 
     assert_eq!(decrypted_a, String::from("msg"));
     assert_eq!(
@@ -209,14 +209,14 @@ mod unit_tests {
       String::from("{\"data\": \"yo bro\", \"expires\": \"2018-01-01T00:00:00+00:00\"}")
     );
 
-    let should_fail_decryption_a = decrypt_paseto(message_a, Some(String::from("data")), &key_buff);
+    let should_fail_decryption_a = decrypt_paseto(&message_a, Some(String::from("data")), &key_buff);
     assert!(should_fail_decryption_a.is_err());
 
     // Try with footers.
-    let message_c = local_paseto(String::from("msg"), Some(String::from("data")), &key_buff)
+    let message_c = local_paseto("msg", Some(String::from("data")), &key_buff)
       .expect("Failed to encrypt V1 Paseto String with footer!");
     let message_d = local_paseto(
-      String::from("{\"data\": \"yo bro\", \"expires\": \"2018-01-01T00:00:00+00:00\"}"),
+      "{\"data\": \"yo bro\", \"expires\": \"2018-01-01T00:00:00+00:00\"}",
       Some(String::from("data")),
       &key_buff,
     )
@@ -225,9 +225,9 @@ mod unit_tests {
     assert!(message_c.starts_with("v1.local."));
     assert!(message_d.starts_with("v1.local."));
 
-    let decrypted_c = decrypt_paseto(message_c.clone(), Some(String::from("data")), &key_buff)
+    let decrypted_c = decrypt_paseto(&message_c, Some(String::from("data")), &key_buff)
       .expect("Failed to decrypt V1 Paseto String with footer!");
-    let decrypted_d = decrypt_paseto(message_d, Some(String::from("data")), &key_buff)
+    let decrypted_d = decrypt_paseto(&message_d, Some(String::from("data")), &key_buff)
       .expect("Failed to decrypt V1 Paseto Json Blob with footer!");
 
     assert_eq!(decrypted_c, "msg");
@@ -237,8 +237,8 @@ mod unit_tests {
     );
 
     // Try with no footer + invalid footer.
-    let should_fail_decryption_b = decrypt_paseto(message_c.clone(), None, &key_buff);
-    let should_fail_decryption_c = decrypt_paseto(message_c, Some(String::from("invalid")), &key_buff);
+    let should_fail_decryption_b = decrypt_paseto(&message_c, None, &key_buff);
+    let should_fail_decryption_c = decrypt_paseto(&message_c, Some(String::from("invalid")), &key_buff);
 
     assert!(should_fail_decryption_b.is_err());
     assert!(should_fail_decryption_c.is_err());

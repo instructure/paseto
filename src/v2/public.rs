@@ -12,7 +12,7 @@ use ring::signature::{Ed25519KeyPair, UnparsedPublicKey, ED25519};
 /// Sign a "v2.public" paseto token.
 ///
 /// Returns a result of a string if signing was successful.
-pub fn public_paseto(msg: String, footer: Option<String>, key_pair: &Ed25519KeyPair) -> Result<String, Error> {
+pub fn public_paseto(msg: &str, footer: Option<String>, key_pair: &Ed25519KeyPair) -> Result<String, Error> {
   let header = String::from("v2.public.");
   let footer_frd = footer.unwrap_or(String::default());
 
@@ -43,7 +43,7 @@ pub fn public_paseto(msg: String, footer: Option<String>, key_pair: &Ed25519KeyP
 /// Verifies a "v2.public" paseto token based on a given key pair.
 ///
 /// Returns the message if verification was successful, otherwise an Err().
-pub fn verify_paseto(token: String, footer: Option<String>, public_key: &[u8]) -> Result<String, Error> {
+pub fn verify_paseto(token: &str, footer: Option<String>, public_key: &[u8]) -> Result<String, Error> {
   let token_parts = token.split(".").map(|item| item.to_owned()).collect::<Vec<String>>();
   if token_parts.len() < 3 {
     return Err(GenericError::InvalidToken {})?;
@@ -100,12 +100,11 @@ mod unit_tests {
     let as_key = Ed25519KeyPair::from_pkcs8(key_pkcs8.as_ref()).expect("Failed to parse keypair");
 
     // Test messages without footers.
-    let public_token_one =
-      public_paseto(String::from("msg"), None, &as_key).expect("Failed to public encode msg with no footer!");
+    let public_token_one = public_paseto("msg", None, &as_key).expect("Failed to public encode msg with no footer!");
     // NOTE: This test is just ensuring we can encode a json object, remember these internal impls
     // don't check for expires being valid!
     let public_token_two = public_paseto(
-      String::from("{\"data\": \"yo bro\", \"expires\": \"2018-01-01T00:00:00+00:00\"}"),
+      "{\"data\": \"yo bro\", \"expires\": \"2018-01-01T00:00:00+00:00\"}",
       None,
       &as_key,
     )
@@ -114,8 +113,8 @@ mod unit_tests {
     assert!(public_token_one.starts_with("v2.public."));
     assert!(public_token_two.starts_with("v2.public."));
 
-    let verified_one = verify_paseto(public_token_one.clone(), None, as_key.public_key().as_ref());
-    let verified_two = verify_paseto(public_token_two, None, as_key.public_key().as_ref());
+    let verified_one = verify_paseto(&public_token_one.clone(), None, as_key.public_key().as_ref());
+    let verified_two = verify_paseto(&public_token_two, None, as_key.public_key().as_ref());
 
     // Verify the above tokens.
     assert!(verified_one.is_ok());
@@ -127,7 +126,7 @@ mod unit_tests {
     );
 
     let should_not_verify_one = verify_paseto(
-      public_token_one,
+      &public_token_one,
       Some(String::from("data")),
       as_key.public_key().as_ref(),
     );
@@ -136,10 +135,10 @@ mod unit_tests {
     assert!(should_not_verify_one.is_err());
 
     // Now lets verify with footers.
-    let public_token_three = public_paseto(String::from("msg"), Some(String::from("footer")), &as_key)
-      .expect("Failed to public encode msg with footer!");
+    let public_token_three =
+      public_paseto("msg", Some(String::from("footer")), &as_key).expect("Failed to public encode msg with footer!");
     let public_token_four = public_paseto(
-      String::from("{\"data\": \"yo bro\", \"expires\": \"2018-01-01T00:00:00+00:00\"}"),
+      "{\"data\": \"yo bro\", \"expires\": \"2018-01-01T00:00:00+00:00\"}",
       Some(String::from("footer")),
       &as_key,
     )
@@ -149,12 +148,12 @@ mod unit_tests {
     assert!(public_token_four.starts_with("v2.public."));
 
     let verified_three = verify_paseto(
-      public_token_three.clone(),
+      &public_token_three,
       Some(String::from("footer")),
       as_key.public_key().as_ref(),
     );
     let verified_four = verify_paseto(
-      public_token_four,
+      &public_token_four,
       Some(String::from("footer")),
       as_key.public_key().as_ref(),
     );
@@ -169,9 +168,9 @@ mod unit_tests {
     );
 
     // Validate no footer + invalid footer both fail on tokens encode with footer.
-    let should_not_verify_two = verify_paseto(public_token_three.clone(), None, as_key.public_key().as_ref());
+    let should_not_verify_two = verify_paseto(&public_token_three, None, as_key.public_key().as_ref());
     let should_not_verify_three = verify_paseto(
-      public_token_three,
+      &public_token_three,
       Some(String::from("bleh")),
       as_key.public_key().as_ref(),
     );

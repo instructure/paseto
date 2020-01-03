@@ -52,10 +52,10 @@ impl PasetoBuilder {
 
     if self.encryption_key.is_some() {
       let mut enc_key = self.encryption_key.unwrap();
-      return V2Local(strd_msg, self.footer, &mut enc_key);
+      return V2Local(&strd_msg, self.footer, &mut enc_key);
     } else if self.ed_key.is_some() {
       let ed_key_pair = self.ed_key.unwrap();
-      return V2Public(strd_msg, self.footer, &ed_key_pair);
+      return V2Public(&strd_msg, self.footer, &ed_key_pair);
     } else if self.rsa_key.is_some() {
       let the_rsa_key = self.rsa_key.unwrap();
       let key_pair = RsaKeyPair::from_der(&the_rsa_key);
@@ -63,7 +63,7 @@ impl PasetoBuilder {
         return Err(RsaKeyErrors::InvalidKey {})?;
       }
       let mut key_pair = key_pair.unwrap();
-      return V1Public(strd_msg, self.footer, &mut key_pair);
+      return V1Public(&strd_msg, self.footer, &mut key_pair);
     } else {
       return Err(GenericError::NoKeyProvided {})?;
     }
@@ -121,10 +121,10 @@ impl PasetoBuilder {
 
     if self.encryption_key.is_some() {
       let mut enc_key = self.encryption_key.unwrap();
-      return V2Local(strd_msg, self.footer, &mut enc_key);
+      return V2Local(&strd_msg, self.footer, &mut enc_key);
     } else if self.ed_key.is_some() {
       let ed_key_pair = self.ed_key.unwrap();
-      return V2Public(strd_msg, self.footer, &ed_key_pair);
+      return V2Public(&strd_msg, self.footer, &ed_key_pair);
     } else {
       return Err(GenericError::NoKeyProvided {})?;
     }
@@ -236,7 +236,7 @@ mod unit_test {
       .expect("Failed to construct paseto token w/ builder!");
 
     let decrypted_token = V2Decrypt(
-      token,
+      &token,
       Some(String::from("footer")),
       &mut Vec::from("YELLOW SUBMARINE, BLACK WIZARDRY".as_bytes()),
     )
