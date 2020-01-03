@@ -22,7 +22,7 @@ fn main() {
 
   let verified_token = paseto::tokens::validate_local_token(
     &token,
-    Some(String::from("key-id:gandalf0")),
+    Some("key-id:gandalf0"),
     Vec::from("YELLOW SUBMARINE, BLACK WIZARDRY".as_bytes()),
   )
   .expect("Failed to validate token!");

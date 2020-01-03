@@ -13,11 +13,11 @@ use ring::signature::{RsaKeyPair, UnparsedPublicKey, RSA_PSS_2048_8192_SHA384, R
 /// Sign a "v1.public" paseto token.
 ///
 /// Returns a result of a string if signing was successful.
-pub fn public_paseto(msg: &str, footer: Option<String>, key_pair: &mut RsaKeyPair) -> Result<String, Error> {
+pub fn public_paseto(msg: &str, footer: Option<&str>, key_pair: &mut RsaKeyPair) -> Result<String, Error> {
   if key_pair.public_modulus_len() != 256 {
     return Err(RsaKeyErrors::InvalidKey {})?;
   }
-  let footer_frd = footer.unwrap_or(String::default());
+  let footer_frd = footer.unwrap_or("");
 
   let header = String::from("v1.public.");
   let pre_auth = pae(vec![
@@ -54,14 +54,14 @@ pub fn public_paseto(msg: &str, footer: Option<String>, key_pair: &mut RsaKeyPai
 /// Verifies a "v1.public" paseto token based on a public key
 ///
 /// Returns the message if verification was successful, otherwise an Err().
-pub fn verify_paseto(token: &str, footer: Option<String>, public_key: &[u8]) -> Result<String, Error> {
+pub fn verify_paseto(token: &str, footer: Option<&str>, public_key: &[u8]) -> Result<String, Error> {
   let token_parts = token.split(".").map(|item| item.to_owned()).collect::<Vec<String>>();
   if token_parts.len() < 3 {
     return Err(GenericError::InvalidToken {})?;
   }
 
   let has_provided_footer = footer.is_some();
-  let footer_as_str = footer.unwrap_or("".to_owned());
+  let footer_as_str = footer.unwrap_or("");
 
   if has_provided_footer {
     if token_parts.len() < 4 {
@@ -133,21 +133,21 @@ mod unit_tests {
     );
 
     // Attempt to verify with a footer
-    let should_not_verify_one = verify_paseto(&public_token_one, Some(String::from("hoi")), public_key);
+    let should_not_verify_one = verify_paseto(&public_token_one, Some("hoi"), public_key);
     assert!(should_not_verify_one.is_err());
 
-    let public_token_three = public_paseto("msg", Some(String::from("data")), &mut key_pair)
-      .expect("Failed to encode public paseto v1 msg with footer!");
+    let public_token_three =
+      public_paseto("msg", Some("data"), &mut key_pair).expect("Failed to encode public paseto v1 msg with footer!");
     let public_token_four = public_paseto(
       "{\"data\": \"yo bro\", \"expires\": \"2018-01-01T00:00:00+00:00\"}",
-      Some(String::from("data")),
+      Some("data"),
       &mut key_pair,
     )
     .expect("Failed to encode public paseto v1 json blob with footer!");
 
-    let verified_three = verify_paseto(&public_token_three, Some(String::from("data")), public_key)
+    let verified_three = verify_paseto(&public_token_three, Some("data"), public_key)
       .expect("Failed to verify public paseto v1 msg with footer!");
-    let verified_four = verify_paseto(&public_token_four, Some(String::from("data")), public_key)
+    let verified_four = verify_paseto(&public_token_four, Some("data"), public_key)
       .expect("Failed to verify public paseto v1 json blob with footer!");
 
     assert_eq!(verified_three, String::from("msg"));
@@ -158,7 +158,7 @@ mod unit_tests {
 
     // Ensure that no footer + incorrect footer fail to validate.
     let should_not_verify_two = verify_paseto(&public_token_three, None, public_key);
-    let should_not_verify_three = verify_paseto(&public_token_three, Some(String::from("test")), public_key);
+    let should_not_verify_three = verify_paseto(&public_token_three, Some("test"), public_key);
 
     assert!(should_not_verify_two.is_err());
     assert!(should_not_verify_three.is_err());
