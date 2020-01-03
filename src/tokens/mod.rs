@@ -40,8 +40,8 @@ pub enum PasetoPublicKey {
 ///   * jti
 ///   * issuedBy
 ///   * subject
-pub fn validate_potential_json_blob(data: String) -> Result<JsonValue, Error> {
-  let value: JsonValue = ParseJson(&data)?;
+pub fn validate_potential_json_blob(data: &str) -> Result<JsonValue, Error> {
+  let value: JsonValue = ParseJson(data)?;
 
   let validation = {
     let issued_at_opt = value.get("iat");
@@ -114,13 +114,13 @@ pub fn validate_potential_json_blob(data: String) -> Result<JsonValue, Error> {
 /// Because we validate these fields the resulting type must be a json object. If it's not
 /// please use the protocol impls directly.
 #[cfg(all(feature = "v1", feature = "v2"))]
-pub fn validate_local_token(token: String, footer: Option<String>, key: Vec<u8>) -> Result<JsonValue, Error> {
+pub fn validate_local_token(token: &str, footer: Option<&str>, key: Vec<u8>) -> Result<JsonValue, Error> {
   if token.starts_with("v2.local.") {
-    let token = V2Decrypt(token, footer, &key)?;
-    return validate_potential_json_blob(token);
+    let message = V2Decrypt(token, footer, &key)?;
+    return validate_potential_json_blob(&message);
   } else if token.starts_with("v1.local.") {
-    let token = V1Decrypt(token, footer, &key)?;
-    return validate_potential_json_blob(token);
+    let message = V1Decrypt(token, footer, &key)?;
+    return validate_potential_json_blob(&message);
   }
 
   return Err(GenericError::InvalidToken {})?;
@@ -140,8 +140,8 @@ pub fn validate_local_token(token: String, footer: Option<String>, key: Vec<u8>)
 /// Because we validate these fields the resulting type must be a json object. If it's not
 /// please use the protocol impls directly.
 #[cfg(all(feature = "v1", not(feature = "v2")))]
-pub fn validate_local_token(token: String, footer: Option<String>, key: Vec<u8>) -> Result<Jsonvalue, Error> {
-  let token = V1Decrypt(token, footer, &key)?;
+pub fn validate_local_token(token: &str, footer: Option<&str>, key: &Vec<u8>) -> Result<Jsonvalue, Error> {
+  let token = V1Decrypt(token, footer, key)?;
   return validate_potential_json_blob(token);
 }
 
@@ -159,8 +159,8 @@ pub fn validate_local_token(token: String, footer: Option<String>, key: Vec<u8>)
 /// Because we validate these fields the resulting type must be a json object. If it's not
 /// please use the protocol impls directly.
 #[cfg(all(feature = "v2", not(feature = "v1")))]
-pub fn validate_local_token(token: String, footer: Option<String>, mut key: Vec<u8>) -> Result<Jsonvalue, Error> {
-  let token = V2Decrypt(token, footer, &mut key)?;
+pub fn validate_local_token(token: &str, footer: Option<&str>, key: &Vec<u8>) -> Result<Jsonvalue, Error> {
+  let token = V2Decrypt(token, footer, key)?;
   return validate_potential_json_blob(token);
 }
 
@@ -177,16 +177,16 @@ pub fn validate_local_token(token: String, footer: Option<String>, mut key: Vec<
 ///   * subject
 /// Because we validate these fields the resulting type must be a json object. If it's not
 /// please use the protocol impls directly.
-pub fn validate_public_token(token: String, footer: Option<String>, key: PasetoPublicKey) -> Result<JsonValue, Error> {
+pub fn validate_public_token(token: &str, footer: Option<&str>, key: &PasetoPublicKey) -> Result<JsonValue, Error> {
   if token.starts_with("v2.public.") {
     return match key {
       PasetoPublicKey::ED25519KeyPair(key_pair) => {
         let internal_msg = V2Verify(token, footer, key_pair.public_key().as_ref())?;
-        validate_potential_json_blob(internal_msg)
+        validate_potential_json_blob(&internal_msg)
       }
       PasetoPublicKey::ED25519PublicKey(pub_key_contents) => {
         let internal_msg = V2Verify(token, footer, &pub_key_contents)?;
-        validate_potential_json_blob(internal_msg)
+        validate_potential_json_blob(&internal_msg)
       }
       _ => Err(GenericError::NoKeyProvided {})?,
     };
@@ -194,7 +194,7 @@ pub fn validate_public_token(token: String, footer: Option<String>, key: PasetoP
     return match key {
       PasetoPublicKey::RSAPublicKey(key_content) => {
         let internal_msg = V1Verify(token, footer, &key_content)?;
-        validate_potential_json_blob(internal_msg)
+        validate_potential_json_blob(&internal_msg)
       }
       _ => Err(GenericError::NoKeyProvided {})?,
     };
@@ -217,7 +217,7 @@ pub fn validate_public_token(token: String, footer: Option<String>, key: PasetoP
 /// Because we validate these fields the resulting type must be a json object. If it's not
 /// please use the protocol impls directly.
 #[cfg(all(feature = "v1", not(feature = "v2")))]
-pub fn validate_public_token(token: String, footer: Option<String>, key: PasetoPublicKey) -> Result<Jsonvalue, Error> {
+pub fn validate_public_token(token: &str, footer: Option<&str>, key: &PasetoPublicKey) -> Result<Jsonvalue, Error> {
   return match key {
     PasetoPublicKey::RSAPublicKey(key_content) => {
       let internal_msg = V1Verify(token, footer, &key_content)?;
@@ -241,7 +241,7 @@ pub fn validate_public_token(token: String, footer: Option<String>, key: PasetoP
 /// Because we validate these fields the resulting type must be a json object. If it's not
 /// please use the protocol impls directly.
 #[cfg(all(feature = "v2", not(feature = "v1")))]
-pub fn validate_public_token(token: String, footer: Option<String>, key: PasetoPublicKey) -> Result<Jsonvalue, Error> {
+pub fn validate_public_token(token: String, footer: Option<&str>, key: PasetoPublicKey) -> Result<Jsonvalue, Error> {
   return match key {
     PasetoPublicKey::ED25519KeyPair(key_pair) => {
       let internal_msg = V2Verify(token, footer, &key_pair)?;
@@ -278,8 +278,8 @@ mod unit_tests {
       .expect("Failed to construct paseto token w/ builder!");
 
     validate_local_token(
-      token,
-      Some(String::from("footer")),
+      &token,
+      Some("footer"),
       Vec::from("YELLOW SUBMARINE, BLACK WIZARDRY".as_bytes()),
     )
     .expect("Failed to validate token!");
@@ -305,8 +305,8 @@ mod unit_tests {
       .expect("Failed to construct paseto token w/ builder!");
 
     assert!(validate_local_token(
-      token,
-      Some(String::from("footer")),
+      &token,
+      Some("footer"),
       Vec::from("YELLOW SUBMARINE, BLACK WIZARDRY".as_bytes())
     )
     .is_err());
@@ -336,12 +336,8 @@ mod unit_tests {
       .build()
       .expect("Failed to construct paseto token w/ builder!");
 
-    validate_public_token(
-      token,
-      Some(String::from("footer")),
-      PasetoPublicKey::ED25519KeyPair(cloned_key),
-    )
-    .expect("Failed to validate token!");
+    validate_public_token(&token, Some("footer"), &PasetoPublicKey::ED25519KeyPair(cloned_key))
+      .expect("Failed to validate token!");
   }
 
   #[test]
@@ -369,9 +365,9 @@ mod unit_tests {
       .expect("Failed to construct paseto token w/ builder!");
 
     validate_public_token(
-      token,
-      Some(String::from("footer")),
-      PasetoPublicKey::ED25519PublicKey(Vec::from(cloned_key.public_key().as_ref())),
+      &token,
+      Some("footer"),
+      &PasetoPublicKey::ED25519PublicKey(Vec::from(cloned_key.public_key().as_ref())),
     )
     .expect("Failed to validate token!");
   }
@@ -400,11 +396,6 @@ mod unit_tests {
       .build()
       .expect("Failed to construct paseto token w/ builder!");
 
-    assert!(validate_public_token(
-      token,
-      Some(String::from("footer")),
-      PasetoPublicKey::ED25519KeyPair(cloned_key)
-    )
-    .is_err());
+    assert!(validate_public_token(&token, Some("footer"), &PasetoPublicKey::ED25519KeyPair(cloned_key)).is_err());
   }
 }
