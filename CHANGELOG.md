@@ -1,4 +1,4 @@
-## Unreleased
+## 1.0.7
 
 * Remove `mut` from the keys used by v2/local.rs.
 * Switch to taking messages, footers, and keys by reference.

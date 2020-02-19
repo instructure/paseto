@@ -1,11 +1,11 @@
 [package]
 name = "paseto"
 description = "An alternative token format to JWT"
-version = "1.0.6"
+version = "1.0.7"
 repository = "https://github.com/instructure/paseto"
 license = "MIT"
 authors = [
-  "Cynthia Coan <ccoan@instructure.com>"
+  "Cynthia Coan <cynthia@coan.dev>"
 ]
 edition = "2018"
 
