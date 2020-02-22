@@ -19,7 +19,7 @@ pub fn public_paseto(msg: &str, footer: Option<&str>, key_pair: &mut RsaKeyPair)
   }
   let footer_frd = footer.unwrap_or("");
 
-  let header = String::from("v1.public.");
+  let header = "v1.public.";
   let pre_auth = pae(vec![
     Vec::from(header.as_bytes()),
     Vec::from(msg.as_bytes()),
@@ -55,7 +55,7 @@ pub fn public_paseto(msg: &str, footer: Option<&str>, key_pair: &mut RsaKeyPair)
 ///
 /// Returns the message if verification was successful, otherwise an Err().
 pub fn verify_paseto(token: &str, footer: Option<&str>, public_key: &[u8]) -> Result<String, Error> {
-  let token_parts = token.split(".").map(|item| item.to_owned()).collect::<Vec<String>>();
+  let token_parts = token.split(".").collect::<Vec<_>>();
   if token_parts.len() < 3 {
     return Err(GenericError::InvalidToken {})?;
   }
@@ -126,10 +126,10 @@ mod unit_tests {
     let verified_two = verify_paseto(&public_token_two, None, public_key)
       .expect("Failed to verify public paseto v1 json blob with no footer!");
 
-    assert_eq!(verified_one, String::from("msg"));
+    assert_eq!(verified_one, "msg");
     assert_eq!(
       verified_two,
-      String::from("{\"data\": \"yo bro\", \"expires\": \"2018-01-01T00:00:00+00:00\"}")
+      "{\"data\": \"yo bro\", \"expires\": \"2018-01-01T00:00:00+00:00\"}"
     );
 
     // Attempt to verify with a footer
@@ -150,10 +150,10 @@ mod unit_tests {
     let verified_four = verify_paseto(&public_token_four, Some("data"), public_key)
       .expect("Failed to verify public paseto v1 json blob with footer!");
 
-    assert_eq!(verified_three, String::from("msg"));
+    assert_eq!(verified_three, "msg");
     assert_eq!(
       verified_four,
-      String::from("{\"data\": \"yo bro\", \"expires\": \"2018-01-01T00:00:00+00:00\"}")
+      "{\"data\": \"yo bro\", \"expires\": \"2018-01-01T00:00:00+00:00\"}"
     );
 
     // Ensure that no footer + incorrect footer fail to validate.

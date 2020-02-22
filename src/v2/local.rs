@@ -31,7 +31,7 @@ pub fn local_paseto(msg: &str, footer: Option<&str>, key: &[u8]) -> Result<Strin
 /// `nonce_key` - The key to the nonce, should be securely generated.
 /// `key` - The key to encrypt the message with.
 fn underlying_local_paseto(msg: &str, footer: Option<&str>, nonce_key: &[u8; 24], key: &[u8]) -> Result<String, Error> {
-  let header = String::from("v2.local.");
+  let header = "v2.local.";
   let footer_frd = footer.unwrap_or("");
   // Specify result type to give rust compiler hints on types.
   let res: Result<(Nonce, Vec<u8>), Error> = {
@@ -93,7 +93,7 @@ fn underlying_local_paseto(msg: &str, footer: Option<&str>, nonce_key: &[u8; 24]
 /// `footer`: The Optional footer to validate.
 /// `key`: The key to decrypt your Paseto.
 pub fn decrypt_paseto(token: &str, footer: Option<&str>, key: &[u8]) -> Result<String, Error> {
-  let token_parts = token.split(".").map(|item| item.to_owned()).collect::<Vec<String>>();
+  let token_parts = token.split(".").collect::<Vec<_>>();
   if token_parts.len() < 3 {
     return Err(GenericError::InvalidToken {})?;
   }
@@ -132,7 +132,7 @@ pub fn decrypt_paseto(token: &str, footer: Option<&str>, key: &[u8]) -> Result<S
   let nonce_obj = nonce_obj.unwrap();
   let key_obj = key_obj.unwrap();
 
-  let decrypted = Decrypt(ciphertext, Some(pre_auth.as_ref()), &nonce_obj, &key_obj);
+  let decrypted = Decrypt(ciphertext, Some(&pre_auth), &nonce_obj, &key_obj);
   if decrypted.is_err() {
     return Err(SodiumErrors::FunctionError {})?;
   }

@@ -34,7 +34,7 @@ pub fn local_paseto(msg: &str, footer: Option<&str>, key: &[u8]) -> Result<Strin
 /// `random_nonce` - The random nonce.
 /// `key` - The key used for encryption.
 fn underlying_local_paseto(msg: &str, footer: Option<&str>, random_nonce: &[u8], key: &[u8]) -> Result<String, Error> {
-  let header = String::from("v1.local.");
+  let header = "v1.local.";
   let footer_frd = footer.unwrap_or("");
   let true_nonce = calculate_hashed_nonce(msg.as_bytes(), random_nonce);
 
@@ -98,7 +98,7 @@ fn underlying_local_paseto(msg: &str, footer: Option<&str>, random_nonce: &[u8],
 /// `footer` - The optional footer to validate against.
 /// `key` - The key used to encrypt the token.
 pub fn decrypt_paseto(token: &str, footer: Option<&str>, key: &[u8]) -> Result<String, Error> {
-  let token_parts = token.split(".").map(|item| item.to_owned()).collect::<Vec<String>>();
+  let token_parts = token.split(".").collect::<Vec<_>>();
   if token_parts.len() < 3 {
     return Err(GenericError::InvalidToken {})?;
   }
@@ -198,10 +198,10 @@ mod unit_tests {
     let decrypted_a = decrypt_paseto(&message_a, None, &key_buff).expect("Failed to decrypt V1 Paseto String");
     let decrypted_b = decrypt_paseto(&message_b, None, &key_buff).expect("Failed to decrypt V1 Paseto JSON Blob");
 
-    assert_eq!(decrypted_a, String::from("msg"));
+    assert_eq!(decrypted_a, "msg");
     assert_eq!(
       decrypted_b,
-      String::from("{\"data\": \"yo bro\", \"expires\": \"2018-01-01T00:00:00+00:00\"}")
+      "{\"data\": \"yo bro\", \"expires\": \"2018-01-01T00:00:00+00:00\"}"
     );
 
     let should_fail_decryption_a = decrypt_paseto(&message_a, Some("data"), &key_buff);
