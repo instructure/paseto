@@ -1,8 +1,8 @@
 fn main() {
   let key = "YELLOW SUBMARINE, BLACK WIZARDRY".as_bytes();
   let mut key_mut = Vec::from("YELLOW SUBMARINE, BLACK WIZARDRY".as_bytes());
-  let message = String::from("This is a signed non-JSON message.");
-  let footer = String::from("key-id:gandalf0");
+  let message = "This is a signed non-JSON message.";
+  let footer = "key-id:gandalf0";
 
   // Version 1
   let v1_token = paseto::v1::local::local_paseto(&message, None, key).expect("Failed to encrypt V1 Token sans footer.");

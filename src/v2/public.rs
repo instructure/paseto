@@ -44,7 +44,7 @@ pub fn public_paseto(msg: &str, footer: Option<&str>, key_pair: &Ed25519KeyPair)
 ///
 /// Returns the message if verification was successful, otherwise an Err().
 pub fn verify_paseto(token: &str, footer: Option<&str>, public_key: &[u8]) -> Result<String, Error> {
-  let token_parts = token.split(".").map(|item| item.to_owned()).collect::<Vec<String>>();
+  let token_parts = token.split(".").collect::<Vec<_>>();
   if token_parts.len() < 3 {
     return Err(GenericError::InvalidToken {})?;
   }
@@ -72,7 +72,7 @@ pub fn verify_paseto(token: &str, footer: Option<&str>, public_key: &[u8]) -> Re
   let (msg, sig) = decoded.split_at(decoded_len - 64);
 
   let pre_auth = pae(vec![
-    Vec::from(String::from("v2.public.").as_bytes()),
+    Vec::from("v2.public.".as_bytes()),
     Vec::from(msg),
     Vec::from(footer_as_str.as_bytes()),
   ]);
@@ -119,10 +119,10 @@ mod unit_tests {
     // Verify the above tokens.
     assert!(verified_one.is_ok());
     assert!(verified_two.is_ok());
-    assert_eq!(verified_one.unwrap(), String::from("msg"));
+    assert_eq!(verified_one.unwrap(), "msg");
     assert_eq!(
       verified_two.unwrap(),
-      String::from("{\"data\": \"yo bro\", \"expires\": \"2018-01-01T00:00:00+00:00\"}")
+      "{\"data\": \"yo bro\", \"expires\": \"2018-01-01T00:00:00+00:00\"}"
     );
 
     let should_not_verify_one = verify_paseto(&public_token_one, Some("data"), as_key.public_key().as_ref());
@@ -149,10 +149,10 @@ mod unit_tests {
     // Verify the footer tokens.
     assert!(verified_three.is_ok());
     assert!(verified_four.is_ok());
-    assert_eq!(verified_three.unwrap(), String::from("msg"));
+    assert_eq!(verified_three.unwrap(), "msg");
     assert_eq!(
       verified_four.unwrap(),
-      String::from("{\"data\": \"yo bro\", \"expires\": \"2018-01-01T00:00:00+00:00\"}")
+      "{\"data\": \"yo bro\", \"expires\": \"2018-01-01T00:00:00+00:00\"}"
     );
 
     // Validate no footer + invalid footer both fail on tokens encode with footer.

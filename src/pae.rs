@@ -43,21 +43,21 @@ mod unit_tests {
   #[test]
   fn test_pae() {
     // Constants taken from paseto source.
-    assert_eq!("0000000000000000".to_owned(), hex::encode(&pae(vec![])));
+    assert_eq!("0000000000000000", hex::encode(&pae(vec![])));
     assert_eq!(
-      "01000000000000000000000000000000".to_owned(),
+      "01000000000000000000000000000000",
       hex::encode(&pae(vec![vec![]]))
     );
     assert_eq!(
-      "020000000000000000000000000000000000000000000000".to_owned(),
+      "020000000000000000000000000000000000000000000000",
       hex::encode(&pae(vec![vec![], vec![]]))
     );
     assert_eq!(
-      "0100000000000000070000000000000050617261676f6e".to_owned(),
+      "0100000000000000070000000000000050617261676f6e",
       hex::encode(&pae(vec![Vec::from("Paragon".as_bytes())]))
     );
     assert_eq!(
-      "0200000000000000070000000000000050617261676f6e0a00000000000000496e6974696174697665".to_owned(),
+      "0200000000000000070000000000000050617261676f6e0a00000000000000496e6974696174697665",
       hex::encode(&pae(vec![
         Vec::from("Paragon".as_bytes()),
         Vec::from("Initiative".as_bytes()),
