@@ -17,7 +17,7 @@ const HEADER: &str = "v2.public.";
 pub fn public_paseto(msg: &str, footer: Option<&str>, key_pair: &Ed25519KeyPair) -> Result<String, Error> {
   let footer_frd = footer.unwrap_or("");
 
-  let pre_auth = pae(&vec![
+  let pre_auth = pae(&[
     HEADER.as_bytes(),
     msg.as_bytes(),
     footer_frd.as_bytes(),
@@ -72,7 +72,7 @@ pub fn verify_paseto(token: &str, footer: Option<&str>, public_key: &[u8]) -> Re
   let decoded_len = decoded.len();
   let (msg, sig) = decoded.split_at(decoded_len - 64);
 
-  let pre_auth = pae(&vec![
+  let pre_auth = pae(&[
     HEADER.as_bytes(),
     msg,
     footer_as_str.as_bytes(),

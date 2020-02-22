@@ -42,24 +42,23 @@ mod unit_tests {
 
   #[test]
   fn test_pae() {
-    let empty = &vec![] as &[u8];
     // Constants taken from paseto source.
-    assert_eq!("0000000000000000", hex::encode(&pae(vec![])));
+    assert_eq!("0000000000000000", hex::encode(&pae(&[])));
     assert_eq!(
       "01000000000000000000000000000000",
-      hex::encode(&pae(&vec![empty]))
+      hex::encode(&pae(&[&[]]))
     );
     assert_eq!(
       "020000000000000000000000000000000000000000000000",
-      hex::encode(&pae(&vec![empty, empty]))
+      hex::encode(&pae(&[&[], &[]]))
     );
     assert_eq!(
       "0100000000000000070000000000000050617261676f6e",
-      hex::encode(&pae(&vec!["Paragon".as_bytes()]))
+      hex::encode(&pae(&["Paragon".as_bytes()]))
     );
     assert_eq!(
       "0200000000000000070000000000000050617261676f6e0a00000000000000496e6974696174697665",
-      hex::encode(&pae(&vec![
+      hex::encode(&pae(&[
         "Paragon".as_bytes(),
         "Initiative".as_bytes(),
       ]))

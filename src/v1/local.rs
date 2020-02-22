@@ -63,7 +63,7 @@ fn underlying_local_paseto(msg: &str, footer: Option<&str>, random_nonce: &[u8],
   let cipher = symm::Cipher::aes_256_ctr();
   let crypted = symm::encrypt(cipher, &ek, Some(&ctr_nonce), msg.as_bytes())?;
 
-  let pre_auth = pae(&vec![
+  let pre_auth = pae(&[
     HEADER.as_bytes(),
     &true_nonce,
     &crypted,
@@ -150,7 +150,7 @@ pub fn decrypt_paseto(token: &str, footer: Option<&str>, key: &[u8]) -> Result<S
     return Err(GenericError::BadHkdf {})?;
   }
 
-  let pre_auth = pae(&vec![
+  let pre_auth = pae(&[
     HEADER.as_bytes(),
     &nonce,
     ciphertext,
