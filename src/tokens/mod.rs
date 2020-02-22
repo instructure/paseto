@@ -18,7 +18,7 @@ use serde_json::{from_str as ParseJson, Value as JsonValue};
 pub mod builder;
 pub use self::builder::*;
 
-/// Wraps the two paseto public key types so we can just have a "validate_public_token"
+/// Wraps the two paseto public key types so we can just have a `validate_public_token`
 /// method without splitting the two implementations.
 pub enum PasetoPublicKey {
   #[cfg(feature = "v1")]
@@ -35,6 +35,7 @@ pub enum PasetoPublicKey {
 ///   * issued_at
 ///   * expired
 ///   * not_before
+///
 /// This specifically does not validate:
 ///   * audience
 ///   * jti
@@ -106,11 +107,13 @@ pub fn validate_potential_json_blob(data: &str) -> Result<JsonValue, Error> {
 ///   * issued_at
 ///   * expired
 ///   * not_before
+///
 /// This specifically does not validate:
 ///   * audience
 ///   * jti
 ///   * issuedBy
 ///   * subject
+///
 /// Because we validate these fields the resulting type must be a json object. If it's not
 /// please use the protocol impls directly.
 #[cfg(all(feature = "v1", feature = "v2"))]
@@ -132,11 +135,13 @@ pub fn validate_local_token(token: &str, footer: Option<&str>, key: Vec<u8>) -> 
 ///   * issued_at
 ///   * expired
 ///   * not_before
+///
 /// This specifically does not validate:
 ///   * audience
 ///   * jti
 ///   * issuedBy
 ///   * subject
+///
 /// Because we validate these fields the resulting type must be a json object. If it's not
 /// please use the protocol impls directly.
 #[cfg(all(feature = "v1", not(feature = "v2")))]
@@ -151,11 +156,13 @@ pub fn validate_local_token(token: &str, footer: Option<&str>, key: &Vec<u8>) ->
 ///   * issued_at
 ///   * expired
 ///   * not_before
+///
 /// This specifically does not validate:
 ///   * audience
 ///   * jti
 ///   * issuedBy
 ///   * subject
+///
 /// Because we validate these fields the resulting type must be a json object. If it's not
 /// please use the protocol impls directly.
 #[cfg(all(feature = "v2", not(feature = "v1")))]
@@ -170,11 +177,13 @@ pub fn validate_local_token(token: &str, footer: Option<&str>, key: &Vec<u8>) ->
 ///   * issued_at
 ///   * expired
 ///   * not_before
+///
 /// This specifically does not validate:
 ///   * audience
 ///   * jti
 ///   * issuedBy
 ///   * subject
+///
 /// Because we validate these fields the resulting type must be a json object. If it's not
 /// please use the protocol impls directly.
 pub fn validate_public_token(token: &str, footer: Option<&str>, key: &PasetoPublicKey) -> Result<JsonValue, Error> {
@@ -209,11 +218,13 @@ pub fn validate_public_token(token: &str, footer: Option<&str>, key: &PasetoPubl
 ///   * issued_at
 ///   * expired
 ///   * not_before
+///
 /// This specifically does not validate:
 ///   * audience
 ///   * jti
 ///   * issuedBy
 ///   * subject
+///
 /// Because we validate these fields the resulting type must be a json object. If it's not
 /// please use the protocol impls directly.
 #[cfg(all(feature = "v1", not(feature = "v2")))]
@@ -233,11 +244,13 @@ pub fn validate_public_token(token: &str, footer: Option<&str>, key: &PasetoPubl
 ///   * issued_at
 ///   * expired
 ///   * not_before
+///
 /// This specifically does not validate:
 ///   * audience
 ///   * jti
 ///   * issuedBy
 ///   * subject
+///
 /// Because we validate these fields the resulting type must be a json object. If it's not
 /// please use the protocol impls directly.
 #[cfg(all(feature = "v2", not(feature = "v1")))]
