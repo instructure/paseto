@@ -50,14 +50,11 @@ impl PasetoBuilder {
   pub fn build(self) -> Result<String, Error> {
     let strd_msg = to_string(&self.extra_claims)?;
 
-    if self.encryption_key.is_some() {
-      let mut enc_key = self.encryption_key.unwrap();
+    if let Some(mut enc_key) = self.encryption_key {
       return V2Local(&strd_msg, self.footer.as_deref(), &mut enc_key);
-    } else if self.ed_key.is_some() {
-      let ed_key_pair = self.ed_key.unwrap();
+    } else if let Some(ed_key_pair) = self.ed_key {
       return V2Public(&strd_msg, self.footer.as_deref(), &ed_key_pair);
-    } else if self.rsa_key.is_some() {
-      let the_rsa_key = self.rsa_key.unwrap();
+    } else if let Some(the_rsa_key) = self.rsa_key {
       let key_pair = RsaKeyPair::from_der(&the_rsa_key);
       if key_pair.is_err() {
         return Err(RsaKeyErrors::InvalidKey {})?;
@@ -86,11 +83,9 @@ impl PasetoBuilder {
   pub fn build(self) -> Result<String, Error> {
     let strd_msg = to_string(&self.extra_claims)?;
 
-    if self.encryption_key.is_some() {
-      let mut enc_key = self.encryption_key.unwrap();
+    if let Some(mut enc_key) = self.encryption_key {
       return V1Local(strd_msg, self.footer, &mut self.enc_key);
-    } else if self.rsa_key.is_some() {
-      let the_rsa_key = self.rsa_key.unwrap();
+    } else if let Some(the_rsa_key) = self.rsa_key {
       let key_pair = RsaKeyPair::from_der(&the_rsa_key);
       if key_pair.is_err() {
         return Err(RsaKeyErrors::InvalidKey {})?;
@@ -119,11 +114,9 @@ impl PasetoBuilder {
   pub fn build(self) -> Result<String> {
     let strd_msg = to_string(&self.extra_claims)?;
 
-    if self.encryption_key.is_some() {
-      let mut enc_key = self.encryption_key.unwrap();
+    if let Some(mut enc_key) = self.encryption_key {
       return V2Local(&strd_msg, self.footer, &mut enc_key);
-    } else if self.ed_key.is_some() {
-      let ed_key_pair = self.ed_key.unwrap();
+    } else if let Some(ed_key_pair) = self.ed_key {
       return V2Public(&strd_msg, self.footer, &ed_key_pair);
     } else {
       return Err(GenericError::NoKeyProvided {})?;
