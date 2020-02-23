@@ -1,10 +1,13 @@
-use chrono::prelude::*;
-use ring::rand::SystemRandom;
-use ring::signature::Ed25519KeyPair;
-use serde_json::json;
+#[cfg(all(feature = "v2", feature = "easy_tokens"))]
+use {
+  chrono::prelude::*,
+  ring::rand::SystemRandom,
+  ring::signature::Ed25519KeyPair,
+  serde_json::json,
+};
 
 fn main() {
-  #[cfg(feature = "v2")]
+  #[cfg(all(feature = "v2", feature = "easy_tokens"))]
   {
     let current_date_time = Utc::now();
     let dt = Utc.ymd(current_date_time.year() + 1, 7, 8).and_hms(9, 10, 11);
