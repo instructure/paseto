@@ -60,6 +60,13 @@ impl PasetoBuilder {
       }
     }
 
+    #[cfg(all(not(feature = "v2"), feature = "v1"))]
+    {
+      if let Some(mut enc_key) = self.encryption_key {
+        return V1Local(&strd_msg, self.footer.as_deref(), &mut enc_key);
+      }
+    }
+
     #[cfg(feature = "v2")]
     {
       if let Some(ed_key_pair) = self.ed_key {
@@ -166,12 +173,17 @@ impl PasetoBuilder {
 
 #[cfg(test)]
 mod unit_test {
+  #[cfg(feature = "v2")]
   use super::*;
+
+  #[cfg(feature = "v2")]
   use crate::v2::local::decrypt_paseto as V2Decrypt;
 
+  #[cfg(feature = "v2")]
   use serde_json::from_str as ParseJson;
 
   #[test]
+  #[cfg(feature = "v2")]
   fn can_construct_a_token() {
     let token = PasetoBuilder::new()
       .set_encryption_key(Vec::from("YELLOW SUBMARINE, BLACK WIZARDRY".as_bytes()))
