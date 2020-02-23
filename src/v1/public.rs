@@ -13,7 +13,7 @@ use ring::signature::{RsaKeyPair, UnparsedPublicKey, RSA_PSS_2048_8192_SHA384, R
 /// Sign a "v1.public" paseto token.
 ///
 /// Returns a result of a string if signing was successful.
-pub fn public_paseto(msg: &str, footer: Option<&str>, key_pair: &mut RsaKeyPair) -> Result<String, Error> {
+pub fn public_paseto(msg: &str, footer: Option<&str>, key_pair: &RsaKeyPair) -> Result<String, Error> {
   if key_pair.public_modulus_len() != 256 {
     return Err(RsaKeyErrors::InvalidKey {})?;
   }
@@ -108,16 +108,16 @@ mod unit_tests {
     let private_key = include_bytes!("signature_rsa_example_private_key.der");
     let public_key = include_bytes!("signature_rsa_example_public_key.der");
 
-    let mut key_pair = RsaKeyPair::from_der(private_key).expect("Bad Private Key pkcs!");
+    let key_pair = RsaKeyPair::from_der(private_key).expect("Bad Private Key pkcs!");
 
     // Test keys without footers.
     let public_token_one =
-      public_paseto("msg", None, &mut key_pair).expect("Failed to encode public paseto v1 msg with no footer!");
+      public_paseto("msg", None, &key_pair).expect("Failed to encode public paseto v1 msg with no footer!");
     // Remember raw protocol doesn't validate expires. We're just ensuring we can encode it.
     let public_token_two = public_paseto(
       "{\"data\": \"yo bro\", \"expires\": \"2018-01-01T00:00:00+00:00\"}",
       None,
-      &mut key_pair,
+      &key_pair,
     )
     .expect("Failed to encode public paseto v1 json blob with no footer!");
 
@@ -137,11 +137,11 @@ mod unit_tests {
     assert!(should_not_verify_one.is_err());
 
     let public_token_three =
-      public_paseto("msg", Some("data"), &mut key_pair).expect("Failed to encode public paseto v1 msg with footer!");
+      public_paseto("msg", Some("data"), &key_pair).expect("Failed to encode public paseto v1 msg with footer!");
     let public_token_four = public_paseto(
       "{\"data\": \"yo bro\", \"expires\": \"2018-01-01T00:00:00+00:00\"}",
       Some("data"),
-      &mut key_pair,
+      &key_pair,
     )
     .expect("Failed to encode public paseto v1 json blob with footer!");
 
