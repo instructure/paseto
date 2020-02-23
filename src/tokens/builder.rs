@@ -1,4 +1,6 @@
-use crate::errors::{GenericError, RsaKeyErrors};
+use crate::errors::GenericError;
+#[cfg(feature = "v1")]
+use crate::errors::RsaKeyErrors;
 
 #[cfg(all(not(feature = "v2"), feature = "v1"))]
 use crate::v1::local_paseto as V1Local;
@@ -84,14 +86,14 @@ impl PasetoBuilder {
     let strd_msg = to_string(&self.extra_claims)?;
 
     if let Some(mut enc_key) = self.encryption_key {
-      return V1Local(strd_msg, self.footer, &mut self.enc_key);
+      return V1Local(&strd_msg, self.footer.as_deref(), &mut enc_key);
     } else if let Some(the_rsa_key) = self.rsa_key {
       let key_pair = RsaKeyPair::from_der(&the_rsa_key);
       if key_pair.is_err() {
         return Err(RsaKeyErrors::InvalidKey {})?;
       }
-      let key_pair = Arc::new(key_pair.unwrap());
-      return V1Public(strd_msg, self.footer, &mut signing_state);
+      let mut key_pair = key_pair.unwrap();
+      return V1Public(&strd_msg, self.footer.as_deref(), &mut key_pair);
     } else {
       return Err(GenericError::NoKeyProvided {})?;
     }
@@ -111,13 +113,13 @@ impl PasetoBuilder {
   }
 
   /// Builds a token.
-  pub fn build(self) -> Result<String> {
+  pub fn build(self) -> Result<String, Error> {
     let strd_msg = to_string(&self.extra_claims)?;
 
     if let Some(mut enc_key) = self.encryption_key {
-      return V2Local(&strd_msg, self.footer, &mut enc_key);
+      return V2Local(&strd_msg, self.footer.as_deref(), &mut enc_key);
     } else if let Some(ed_key_pair) = self.ed_key {
-      return V2Public(&strd_msg, self.footer, &ed_key_pair);
+      return V2Public(&strd_msg, self.footer.as_deref(), &ed_key_pair);
     } else {
       return Err(GenericError::NoKeyProvided {})?;
     }
