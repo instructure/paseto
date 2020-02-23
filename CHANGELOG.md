@@ -1,6 +1,7 @@
 ## Unreleased
 
 * High-level functions like `validate_local_token` and `validate_public_token` now take the `key` by reference.
+* The reference to `key` passed as argument to `v1::public::public_paseto` is not longer taken as mutable.
 
 ## 1.0.7
 
