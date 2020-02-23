@@ -35,14 +35,15 @@ pub struct PasetoBuilder {
   extra_claims: HashMap<String, Value>,
 }
 
-#[cfg(all(feature = "v1", feature = "v2"))]
 impl PasetoBuilder {
   /// Creates a new Paseto builder.
   pub fn new() -> PasetoBuilder {
     PasetoBuilder {
       footer: None,
       encryption_key: None,
+      #[cfg(feature = "v1")]
       rsa_key: None,
+      #[cfg(feature = "v2")]
       ed_key: None,
       extra_claims: HashMap::new(),
     }
@@ -52,77 +53,33 @@ impl PasetoBuilder {
   pub fn build(self) -> Result<String, Error> {
     let strd_msg = to_string(&self.extra_claims)?;
 
-    if let Some(mut enc_key) = self.encryption_key {
-      return V2Local(&strd_msg, self.footer.as_deref(), &mut enc_key);
-    } else if let Some(ed_key_pair) = self.ed_key {
-      return V2Public(&strd_msg, self.footer.as_deref(), &ed_key_pair);
-    } else if let Some(the_rsa_key) = self.rsa_key {
-      let key_pair = RsaKeyPair::from_der(&the_rsa_key);
-      if key_pair.is_err() {
-        return Err(RsaKeyErrors::InvalidKey {})?;
+    #[cfg(feature = "v2")]
+    {
+      if let Some(mut enc_key) = self.encryption_key {
+        return V2Local(&strd_msg, self.footer.as_deref(), &mut enc_key);
       }
-      let mut key_pair = key_pair.unwrap();
-      return V1Public(&strd_msg, self.footer.as_deref(), &mut key_pair);
-    } else {
-      return Err(GenericError::NoKeyProvided {})?;
     }
-  }
-}
 
-#[cfg(all(not(feature = "v2"), feature = "v1"))]
-impl PasetoBuilder {
-  /// Creates a new Paseto builder.
-  pub fn new() -> PasetoBuilder {
-    PasetoBuilder {
-      footer: None,
-      encryption_key: None,
-      rsa_key: None,
-      extra_claims: HashMap::new(),
-    }
-  }
-
-  /// Builds a token.
-  pub fn build(self) -> Result<String, Error> {
-    let strd_msg = to_string(&self.extra_claims)?;
-
-    if let Some(mut enc_key) = self.encryption_key {
-      return V1Local(&strd_msg, self.footer.as_deref(), &mut enc_key);
-    } else if let Some(the_rsa_key) = self.rsa_key {
-      let key_pair = RsaKeyPair::from_der(&the_rsa_key);
-      if key_pair.is_err() {
-        return Err(RsaKeyErrors::InvalidKey {})?;
+    #[cfg(feature = "v2")]
+    {
+      if let Some(ed_key_pair) = self.ed_key {
+        return V2Public(&strd_msg, self.footer.as_deref(), &ed_key_pair);
       }
-      let mut key_pair = key_pair.unwrap();
-      return V1Public(&strd_msg, self.footer.as_deref(), &mut key_pair);
-    } else {
-      return Err(GenericError::NoKeyProvided {})?;
     }
-  }
-}
 
-#[cfg(all(not(feature = "v1"), feature = "v2"))]
-impl PasetoBuilder {
-  /// Creates a new Paseto builder.
-  pub fn new() -> PasetoBuilder {
-    PasetoBuilder {
-      footer: None,
-      encryption_key: None,
-      ed_key: None,
-      extra_claims: HashMap::new(),
+    #[cfg(feature = "v1")]
+    {
+      if let Some(the_rsa_key) = self.rsa_key {
+        let key_pair = RsaKeyPair::from_der(&the_rsa_key);
+        if key_pair.is_err() {
+          return Err(RsaKeyErrors::InvalidKey {})?;
+        }
+        let mut key_pair = key_pair.unwrap();
+        return V1Public(&strd_msg, self.footer.as_deref(), &mut key_pair);
+      }
     }
-  }
 
-  /// Builds a token.
-  pub fn build(self) -> Result<String, Error> {
-    let strd_msg = to_string(&self.extra_claims)?;
-
-    if let Some(mut enc_key) = self.encryption_key {
-      return V2Local(&strd_msg, self.footer.as_deref(), &mut enc_key);
-    } else if let Some(ed_key_pair) = self.ed_key {
-      return V2Public(&strd_msg, self.footer.as_deref(), &ed_key_pair);
-    } else {
-      return Err(GenericError::NoKeyProvided {})?;
-    }
+    return Err(GenericError::NoKeyProvided {})?;
   }
 }
 
