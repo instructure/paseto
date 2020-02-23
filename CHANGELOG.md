@@ -1,3 +1,7 @@
+## Unreleased
+
+* High-level functions like `validate_local_token` and `validate_public_token` now take the `key` by reference.
+
 ## 1.0.7
 
 * Remove `mut` from the keys used by v2/local.rs.

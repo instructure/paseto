@@ -114,7 +114,7 @@ pub fn validate_potential_json_blob(data: &str) -> Result<JsonValue, Error> {
 /// Because we validate these fields the resulting type must be a json object. If it's not
 /// please use the protocol impls directly.
 #[cfg(all(feature = "v1", feature = "v2"))]
-pub fn validate_local_token(token: &str, footer: Option<&str>, key: Vec<u8>) -> Result<JsonValue, Error> {
+pub fn validate_local_token(token: &str, footer: Option<&str>, key: &[u8]) -> Result<JsonValue, Error> {
   if token.starts_with("v2.local.") {
     let message = V2Decrypt(token, footer, &key)?;
     return validate_potential_json_blob(&message);
@@ -140,7 +140,7 @@ pub fn validate_local_token(token: &str, footer: Option<&str>, key: Vec<u8>) -> 
 /// Because we validate these fields the resulting type must be a json object. If it's not
 /// please use the protocol impls directly.
 #[cfg(all(feature = "v1", not(feature = "v2")))]
-pub fn validate_local_token(token: &str, footer: Option<&str>, key: &Vec<u8>) -> Result<Jsonvalue, Error> {
+pub fn validate_local_token(token: &str, footer: Option<&str>, key: &[u8]) -> Result<Jsonvalue, Error> {
   let token = V1Decrypt(token, footer, key)?;
   return validate_potential_json_blob(token);
 }
@@ -159,7 +159,7 @@ pub fn validate_local_token(token: &str, footer: Option<&str>, key: &Vec<u8>) ->
 /// Because we validate these fields the resulting type must be a json object. If it's not
 /// please use the protocol impls directly.
 #[cfg(all(feature = "v2", not(feature = "v1")))]
-pub fn validate_local_token(token: &str, footer: Option<&str>, key: &Vec<u8>) -> Result<Jsonvalue, Error> {
+pub fn validate_local_token(token: &str, footer: Option<&str>, key: &[u8]) -> Result<Jsonvalue, Error> {
   let token = V2Decrypt(token, footer, key)?;
   return validate_potential_json_blob(token);
 }
@@ -241,7 +241,7 @@ pub fn validate_public_token(token: &str, footer: Option<&str>, key: &PasetoPubl
 /// Because we validate these fields the resulting type must be a json object. If it's not
 /// please use the protocol impls directly.
 #[cfg(all(feature = "v2", not(feature = "v1")))]
-pub fn validate_public_token(token: String, footer: Option<&str>, key: PasetoPublicKey) -> Result<Jsonvalue, Error> {
+pub fn validate_public_token(token: String, footer: Option<&str>, key: &PasetoPublicKey) -> Result<Jsonvalue, Error> {
   return match key {
     PasetoPublicKey::ED25519KeyPair(key_pair) => {
       let internal_msg = V2Verify(token, footer, &key_pair)?;
@@ -280,7 +280,7 @@ mod unit_tests {
     validate_local_token(
       &token,
       Some("footer"),
-      Vec::from("YELLOW SUBMARINE, BLACK WIZARDRY".as_bytes()),
+      &"YELLOW SUBMARINE, BLACK WIZARDRY".as_bytes(),
     )
     .expect("Failed to validate token!");
   }
@@ -307,7 +307,7 @@ mod unit_tests {
     assert!(validate_local_token(
       &token,
       Some("footer"),
-      Vec::from("YELLOW SUBMARINE, BLACK WIZARDRY".as_bytes())
+      &"YELLOW SUBMARINE, BLACK WIZARDRY".as_bytes()
     )
     .is_err());
   }
