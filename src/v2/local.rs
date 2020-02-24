@@ -4,7 +4,6 @@ use crate::errors::{GenericError, SodiumErrors};
 use crate::pae::pae;
 
 use base64::{decode_config, encode_config, URL_SAFE_NO_PAD};
-use failure::Error;
 use ring::constant_time::verify_slices_are_equal as ConstantTimeEquals;
 use ring::rand::{SecureRandom, SystemRandom};
 use sodiumoxide::crypto::aead::xchacha20poly1305_ietf::{open as Decrypt, seal as Encrypt, Key, Nonce};
@@ -13,7 +12,7 @@ use sodiumoxide::crypto::generichash::State as GenericHashState;
 /// Encrypt a "v2.local" paseto token.
 ///
 /// Returns a result of a string if encryption was successful.
-pub fn local_paseto(msg: &str, footer: Option<&str>, key: &[u8]) -> Result<String, Error> {
+pub fn local_paseto(msg: &str, footer: Option<&str>, key: &[u8]) -> Result<String, GenericError> {
   let rng = SystemRandom::new();
   let mut buff: [u8; 24] = [0u8; 24];
   let res = rng.fill(&mut buff);
@@ -30,11 +29,11 @@ pub fn local_paseto(msg: &str, footer: Option<&str>, key: &[u8]) -> Result<Strin
 /// `footer` - The footer to add.
 /// `nonce_key` - The key to the nonce, should be securely generated.
 /// `key` - The key to encrypt the message with.
-fn underlying_local_paseto(msg: &str, footer: Option<&str>, nonce_key: &[u8; 24], key: &[u8]) -> Result<String, Error> {
+fn underlying_local_paseto(msg: &str, footer: Option<&str>, nonce_key: &[u8; 24], key: &[u8]) -> Result<String, GenericError> {
   let header = "v2.local.";
   let footer_frd = footer.unwrap_or("");
   // Specify result type to give rust compiler hints on types.
-  let res: Result<(Nonce, Vec<u8>), Error> = {
+  let res: Result<(Nonce, Vec<u8>), GenericError> = {
     if let Ok(mut state) = GenericHashState::new(24, Some(nonce_key)) {
       if let Ok(_) = state.update(msg.as_bytes()) {
         if let Ok(finalized) = state.finalize() {
@@ -43,22 +42,22 @@ fn underlying_local_paseto(msg: &str, footer: Option<&str>, nonce_key: &[u8; 24]
             let to_return: (Nonce, Vec<u8>) = (nonce, Vec::from(ref_finalized));
             Ok(to_return)
           } else {
-            Err(SodiumErrors::FunctionError {})?
+            Err(SodiumErrors::FunctionError)?
           }
         } else {
-          Err(SodiumErrors::FunctionError {})?
+          Err(SodiumErrors::FunctionError)?
         }
       } else {
-        Err(SodiumErrors::FunctionError {})?
+        Err(SodiumErrors::FunctionError)?
       }
     } else {
-      Err(SodiumErrors::FunctionError {})?
+      Err(SodiumErrors::FunctionError)?
     }
   };
   let (nonce, nonce_vec) = res?;
   let key_obj = Key::from_slice(key);
   if key_obj.is_none() {
-    return Err(SodiumErrors::InvalidKey {})?;
+    return Err(SodiumErrors::InvalidKey)?;
   }
   let key_obj = key_obj.unwrap();
 
@@ -92,7 +91,7 @@ fn underlying_local_paseto(msg: &str, footer: Option<&str>, nonce_key: &[u8; 24]
 /// `token`: The Token to decrypt.
 /// `footer`: The Optional footer to validate.
 /// `key`: The key to decrypt your Paseto.
-pub fn decrypt_paseto(token: &str, footer: Option<&str>, key: &[u8]) -> Result<String, Error> {
+pub fn decrypt_paseto(token: &str, footer: Option<&str>, key: &[u8]) -> Result<String, GenericError> {
   let token_parts = token.split(".").collect::<Vec<_>>();
   if token_parts.len() < 3 {
     return Err(GenericError::InvalidToken {})?;
@@ -127,7 +126,7 @@ pub fn decrypt_paseto(token: &str, footer: Option<&str>, key: &[u8]) -> Result<S
   let nonce_obj = Nonce::from_slice(nonce);
   let key_obj = Key::from_slice(key);
   if nonce_obj.is_none() || key_obj.is_none() {
-    return Err(SodiumErrors::InvalidKey {})?;
+    return Err(SodiumErrors::InvalidKey)?;
   }
   let nonce_obj = nonce_obj.unwrap();
   let key_obj = key_obj.unwrap();

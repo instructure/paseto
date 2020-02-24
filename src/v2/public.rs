@@ -5,14 +5,13 @@ use crate::errors::GenericError;
 use crate::pae::pae;
 
 use base64::{decode_config, encode_config, URL_SAFE_NO_PAD};
-use failure::Error;
 use ring::constant_time::verify_slices_are_equal as ConstantTimeEquals;
 use ring::signature::{Ed25519KeyPair, UnparsedPublicKey, ED25519};
 
 /// Sign a "v2.public" paseto token.
 ///
 /// Returns a result of a string if signing was successful.
-pub fn public_paseto(msg: &str, footer: Option<&str>, key_pair: &Ed25519KeyPair) -> Result<String, Error> {
+pub fn public_paseto(msg: &str, footer: Option<&str>, key_pair: &Ed25519KeyPair) -> Result<String, GenericError> {
   let header = "v2.public.";
   let footer_frd = footer.unwrap_or("");
 
@@ -43,7 +42,7 @@ pub fn public_paseto(msg: &str, footer: Option<&str>, key_pair: &Ed25519KeyPair)
 /// Verifies a "v2.public" paseto token based on a given key pair.
 ///
 /// Returns the message if verification was successful, otherwise an Err().
-pub fn verify_paseto(token: &str, footer: Option<&str>, public_key: &[u8]) -> Result<String, Error> {
+pub fn verify_paseto(token: &str, footer: Option<&str>, public_key: &[u8]) -> Result<String, GenericError> {
   let token_parts = token.split(".").collect::<Vec<_>>();
   if token_parts.len() < 3 {
     return Err(GenericError::InvalidToken {})?;

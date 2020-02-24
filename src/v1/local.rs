@@ -6,7 +6,6 @@ use crate::v1::get_nonce::calculate_hashed_nonce;
 use crate::v1::key_wrapper::CustomKeyWrapper;
 
 use base64::{decode_config, encode_config, URL_SAFE_NO_PAD};
-use failure::Error;
 use openssl::symm;
 use ring::constant_time::verify_slices_are_equal as ConstantTimeEquals;
 use ring::hkdf::{Salt, HKDF_SHA384};
@@ -16,7 +15,7 @@ use ring::rand::{SecureRandom, SystemRandom};
 /// Encrypt a "v1.local" paseto token.
 ///
 /// Returns a result of a string if encryption was successful.
-pub fn local_paseto(msg: &str, footer: Option<&str>, key: &[u8]) -> Result<String, Error> {
+pub fn local_paseto(msg: &str, footer: Option<&str>, key: &[u8]) -> Result<String, GenericError> {
   let rng = SystemRandom::new();
   let mut buff: [u8; 32] = [0u8; 32];
   let res = rng.fill(&mut buff);
@@ -33,7 +32,7 @@ pub fn local_paseto(msg: &str, footer: Option<&str>, key: &[u8]) -> Result<Strin
 /// `footer` - The optional footer.
 /// `random_nonce` - The random nonce.
 /// `key` - The key used for encryption.
-fn underlying_local_paseto(msg: &str, footer: Option<&str>, random_nonce: &[u8], key: &[u8]) -> Result<String, Error> {
+fn underlying_local_paseto(msg: &str, footer: Option<&str>, random_nonce: &[u8], key: &[u8]) -> Result<String, GenericError> {
   let header = "v1.local.";
   let footer_frd = footer.unwrap_or("");
   let true_nonce = calculate_hashed_nonce(msg.as_bytes(), random_nonce);
@@ -51,12 +50,12 @@ fn underlying_local_paseto(msg: &str, footer: Option<&str>, random_nonce: &[u8],
   let ek_result = extracted.expand(&ek_info, CustomKeyWrapper(32));
   let ak_result = extracted.expand(&ak_info, CustomKeyWrapper(32));
   if ek_result.is_err() || ak_result.is_err() {
-    return Err(GenericError::BadHkdf {})?;
+    return Err(GenericError::BadHkdf)?;
   }
   let ek_fill_result = ek_result.unwrap().fill(&mut ek);
   let ak_fill_result = ak_result.unwrap().fill(&mut ak);
   if ek_fill_result.is_err() || ak_fill_result.is_err() {
-    return Err(GenericError::BadHkdf {})?;
+    return Err(GenericError::BadHkdf)?;
   }
 
   let cipher = symm::Cipher::aes_256_ctr();
@@ -97,7 +96,7 @@ fn underlying_local_paseto(msg: &str, footer: Option<&str>, random_nonce: &[u8],
 /// `token` - The encrypted token.
 /// `footer` - The optional footer to validate against.
 /// `key` - The key used to encrypt the token.
-pub fn decrypt_paseto(token: &str, footer: Option<&str>, key: &[u8]) -> Result<String, Error> {
+pub fn decrypt_paseto(token: &str, footer: Option<&str>, key: &[u8]) -> Result<String, GenericError> {
   let token_parts = token.split(".").collect::<Vec<_>>();
   if token_parts.len() < 3 {
     return Err(GenericError::InvalidToken {})?;
@@ -141,12 +140,12 @@ pub fn decrypt_paseto(token: &str, footer: Option<&str>, key: &[u8]) -> Result<S
   let ek_result = extracted.expand(&ek_info, CustomKeyWrapper(32));
   let ak_result = extracted.expand(&ak_info, CustomKeyWrapper(32));
   if ek_result.is_err() || ak_result.is_err() {
-    return Err(GenericError::BadHkdf {})?;
+    return Err(GenericError::BadHkdf)?;
   }
   let ek_fill_result = ek_result.unwrap().fill(&mut ek);
   let ak_fill_result = ak_result.unwrap().fill(&mut ak);
   if ek_fill_result.is_err() || ak_fill_result.is_err() {
-    return Err(GenericError::BadHkdf {})?;
+    return Err(GenericError::BadHkdf)?;
   }
 
   let pre_auth = pae(vec![

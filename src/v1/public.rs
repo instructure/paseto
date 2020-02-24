@@ -5,7 +5,6 @@ use crate::errors::{GenericError, RsaKeyErrors};
 use crate::pae::pae;
 
 use base64::{decode_config, encode_config, URL_SAFE_NO_PAD};
-use failure::Error;
 use ring::constant_time::verify_slices_are_equal as ConstantTimeEquals;
 use ring::rand::SystemRandom;
 use ring::signature::{RsaKeyPair, UnparsedPublicKey, RSA_PSS_2048_8192_SHA384, RSA_PSS_SHA384};
@@ -13,9 +12,9 @@ use ring::signature::{RsaKeyPair, UnparsedPublicKey, RSA_PSS_2048_8192_SHA384, R
 /// Sign a "v1.public" paseto token.
 ///
 /// Returns a result of a string if signing was successful.
-pub fn public_paseto(msg: &str, footer: Option<&str>, key_pair: &RsaKeyPair) -> Result<String, Error> {
+pub fn public_paseto(msg: &str, footer: Option<&str>, key_pair: &RsaKeyPair) -> Result<String, GenericError> {
   if key_pair.public_modulus_len() != 256 {
-    return Err(RsaKeyErrors::InvalidKey {})?;
+    return Err(RsaKeyErrors::InvalidModulusSize { expected: 256, actual: key_pair.public_modulus_len() })?;
   }
   let footer_frd = footer.unwrap_or("");
 
@@ -30,7 +29,7 @@ pub fn public_paseto(msg: &str, footer: Option<&str>, key_pair: &RsaKeyPair) -> 
   let mut signed_msg = [0; 256];
   let sign_res = key_pair.sign(&RSA_PSS_SHA384, &random, &pre_auth, &mut signed_msg);
   if sign_res.is_err() {
-    return Err(RsaKeyErrors::SignError {})?;
+    return Err(RsaKeyErrors::SignError)?;
   }
 
   let mut combined_vec = Vec::new();
@@ -54,7 +53,7 @@ pub fn public_paseto(msg: &str, footer: Option<&str>, key_pair: &RsaKeyPair) -> 
 /// Verifies a "v1.public" paseto token based on a public key
 ///
 /// Returns the message if verification was successful, otherwise an Err().
-pub fn verify_paseto(token: &str, footer: Option<&str>, public_key: &[u8]) -> Result<String, Error> {
+pub fn verify_paseto(token: &str, footer: Option<&str>, public_key: &[u8]) -> Result<String, GenericError> {
   let token_parts = token.split(".").collect::<Vec<_>>();
   if token_parts.len() < 3 {
     return Err(GenericError::InvalidToken {})?;
