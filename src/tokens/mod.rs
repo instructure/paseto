@@ -11,8 +11,7 @@ use crate::v2::{decrypt_paseto as V2Decrypt, verify_paseto as V2Verify};
 use chrono::prelude::*;
 use failure::Error;
 #[cfg(feature = "v2")]
-use ring::signature::Ed25519KeyPair;
-use ring::signature::KeyPair;
+use ring::signature::{Ed25519KeyPair, KeyPair};
 use serde_json::{from_str as ParseJson, Value as JsonValue};
 
 pub mod builder;
@@ -116,59 +115,24 @@ pub fn validate_potential_json_blob(data: &str) -> Result<JsonValue, Error> {
 ///
 /// Because we validate these fields the resulting type must be a json object. If it's not
 /// please use the protocol impls directly.
-#[cfg(all(feature = "v1", feature = "v2"))]
 pub fn validate_local_token(token: &str, footer: Option<&str>, key: &[u8]) -> Result<JsonValue, Error> {
-  if token.starts_with("v2.local.") {
-    let message = V2Decrypt(token, footer, &key)?;
-    return validate_potential_json_blob(&message);
-  } else if token.starts_with("v1.local.") {
-    let message = V1Decrypt(token, footer, &key)?;
-    return validate_potential_json_blob(&message);
+  #[cfg(feature = "v2")]
+  {
+    if token.starts_with("v2.local.") {
+      let message = V2Decrypt(token, footer, &key)?;
+      return validate_potential_json_blob(&message);
+    }
+  }
+
+  #[cfg(feature = "v1")]
+  {
+    if token.starts_with("v1.local.") {
+      let message = V1Decrypt(token, footer, &key)?;
+      return validate_potential_json_blob(&message);
+    }
   }
 
   return Err(GenericError::InvalidToken {})?;
-}
-
-/// Validate a local token for V1.
-///
-/// This specifically validates:
-///   * issued_at
-///   * expired
-///   * not_before
-///
-/// This specifically does not validate:
-///   * audience
-///   * jti
-///   * issuedBy
-///   * subject
-///
-/// Because we validate these fields the resulting type must be a json object. If it's not
-/// please use the protocol impls directly.
-#[cfg(all(feature = "v1", not(feature = "v2")))]
-pub fn validate_local_token(token: &str, footer: Option<&str>, key: &[u8]) -> Result<Jsonvalue, Error> {
-  let token = V1Decrypt(token, footer, key)?;
-  return validate_potential_json_blob(token);
-}
-
-/// Validate a local token for V2.
-///
-/// This specifically validates:
-///   * issued_at
-///   * expired
-///   * not_before
-///
-/// This specifically does not validate:
-///   * audience
-///   * jti
-///   * issuedBy
-///   * subject
-///
-/// Because we validate these fields the resulting type must be a json object. If it's not
-/// please use the protocol impls directly.
-#[cfg(all(feature = "v2", not(feature = "v1")))]
-pub fn validate_local_token(token: &str, footer: Option<&str>, key: &[u8]) -> Result<Jsonvalue, Error> {
-  let token = V2Decrypt(token, footer, key)?;
-  return validate_potential_json_blob(token);
 }
 
 /// Validate a public token for V1, or V2.
@@ -187,87 +151,45 @@ pub fn validate_local_token(token: &str, footer: Option<&str>, key: &[u8]) -> Re
 /// Because we validate these fields the resulting type must be a json object. If it's not
 /// please use the protocol impls directly.
 pub fn validate_public_token(token: &str, footer: Option<&str>, key: &PasetoPublicKey) -> Result<JsonValue, Error> {
-  if token.starts_with("v2.public.") {
-    return match key {
-      PasetoPublicKey::ED25519KeyPair(key_pair) => {
-        let internal_msg = V2Verify(token, footer, key_pair.public_key().as_ref())?;
-        validate_potential_json_blob(&internal_msg)
-      }
-      PasetoPublicKey::ED25519PublicKey(pub_key_contents) => {
-        let internal_msg = V2Verify(token, footer, &pub_key_contents)?;
-        validate_potential_json_blob(&internal_msg)
-      }
-      _ => Err(GenericError::NoKeyProvided {})?,
-    };
-  } else if token.starts_with("v1.public.") {
-    return match key {
-      PasetoPublicKey::RSAPublicKey(key_content) => {
-        let internal_msg = V1Verify(token, footer, &key_content)?;
-        validate_potential_json_blob(&internal_msg)
-      }
-      _ => Err(GenericError::NoKeyProvided {})?,
-    };
+  #[cfg(feature = "v2")]
+  {
+    if token.starts_with("v2.public.") {
+      return match key {
+        PasetoPublicKey::ED25519KeyPair(key_pair) => {
+          let internal_msg = V2Verify(token, footer, key_pair.public_key().as_ref())?;
+          validate_potential_json_blob(&internal_msg)
+        }
+        PasetoPublicKey::ED25519PublicKey(pub_key_contents) => {
+          let internal_msg = V2Verify(token, footer, &pub_key_contents)?;
+          validate_potential_json_blob(&internal_msg)
+        }
+        #[cfg(feature = "v1")]
+        _ => Err(GenericError::NoKeyProvided {})?,
+      };
+    }
+  }
+
+  #[cfg(feature = "v1")]
+  {
+    if token.starts_with("v1.public.") {
+      return match key {
+        PasetoPublicKey::RSAPublicKey(key_content) => {
+          let internal_msg = V1Verify(token, footer, &key_content)?;
+          validate_potential_json_blob(&internal_msg)
+        }
+        #[cfg(feature = "v2")]
+        _ => Err(GenericError::NoKeyProvided {})?,
+      };
+    }
   }
 
   return Err(GenericError::InvalidToken {})?;
 }
 
-/// Validate a public token for V1.
-///
-/// This specifically validates:
-///   * issued_at
-///   * expired
-///   * not_before
-///
-/// This specifically does not validate:
-///   * audience
-///   * jti
-///   * issuedBy
-///   * subject
-///
-/// Because we validate these fields the resulting type must be a json object. If it's not
-/// please use the protocol impls directly.
-#[cfg(all(feature = "v1", not(feature = "v2")))]
-pub fn validate_public_token(token: &str, footer: Option<&str>, key: &PasetoPublicKey) -> Result<Jsonvalue, Error> {
-  return match key {
-    PasetoPublicKey::RSAPublicKey(key_content) => {
-      let internal_msg = V1Verify(token, footer, &key_content)?;
-      validate_potential_json_blob(internal_msg)
-    }
-    _ => Err(GenericError::NoKeyProvided {})?,
-  };
-}
-
-/// Validate a public token for V2.
-///
-/// This specifically validates:
-///   * issued_at
-///   * expired
-///   * not_before
-///
-/// This specifically does not validate:
-///   * audience
-///   * jti
-///   * issuedBy
-///   * subject
-///
-/// Because we validate these fields the resulting type must be a json object. If it's not
-/// please use the protocol impls directly.
-#[cfg(all(feature = "v2", not(feature = "v1")))]
-pub fn validate_public_token(token: String, footer: Option<&str>, key: &PasetoPublicKey) -> Result<Jsonvalue, Error> {
-  return match key {
-    PasetoPublicKey::ED25519KeyPair(key_pair) => {
-      let internal_msg = V2Verify(token, footer, &key_pair)?;
-      validate_potential_json_blob(internal_msg)
-    }
-    _ => Err(GenericError::NoKeyProvided {})?,
-  };
-}
-
 #[cfg(test)]
 mod unit_tests {
   use super::*;
-
+  #[cfg(feature = "v2")]
   use ring::rand::SystemRandom;
   use serde_json::json;
 
@@ -326,6 +248,7 @@ mod unit_tests {
   }
 
   #[test]
+  #[cfg(feature = "v2")]
   fn valid_pub_token_passes_test() {
     let current_date_time = Utc::now();
     let dt = Utc.ymd(current_date_time.year() + 1, 7, 8).and_hms(9, 10, 11);
@@ -354,6 +277,7 @@ mod unit_tests {
   }
 
   #[test]
+  #[cfg(feature = "v2")]
   fn validate_pub_key_only_v2() {
     let current_date_time = Utc::now();
     let dt = Utc.ymd(current_date_time.year() + 1, 7, 8).and_hms(9, 10, 11);
@@ -386,6 +310,7 @@ mod unit_tests {
   }
 
   #[test]
+  #[cfg(feature = "v2")]
   fn invalid_pub_token_doesnt_validate() {
     let current_date_time = Utc::now();
     let dt = Utc.ymd(current_date_time.year() - 1, 7, 8).and_hms(9, 10, 11);
