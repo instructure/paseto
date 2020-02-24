@@ -2,6 +2,7 @@
 
 * High-level functions like `validate_local_token` and `validate_public_token` now take the `key` by reference.
 * The reference to `key` passed as argument to `v1::public::public_paseto` is not longer taken as mutable.
+* Error types have been changed, all functions now return `errors::GenericError` and this type now implements `std::error::Error`.
 
 ## 1.0.7
 
