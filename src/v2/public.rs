@@ -53,12 +53,12 @@ pub fn verify_paseto(token: &str, footer: Option<&str>, public_key: &[u8]) -> Re
 
   if has_provided_footer {
     if token_parts.len() < 4 {
-      return Err(GenericError::InvalidFooter {})?;
+      return Err(GenericError::InvalidFooter)?;
     }
     let footer_encoded = encode_config(footer_as_str.as_bytes(), URL_SAFE_NO_PAD);
 
     if ConstantTimeEquals(footer_encoded.as_bytes(), token_parts[3].as_bytes()).is_err() {
-      return Err(GenericError::InvalidFooter {})?;
+      return Err(GenericError::InvalidFooter)?;
     }
   }
 

@@ -27,10 +27,8 @@ pub fn public_paseto(msg: &str, footer: Option<&str>, key_pair: &RsaKeyPair) -> 
   let random = SystemRandom::new();
 
   let mut signed_msg = [0; 256];
-  let sign_res = key_pair.sign(&RSA_PSS_SHA384, &random, &pre_auth, &mut signed_msg);
-  if sign_res.is_err() {
-    return Err(RsaKeyErrors::SignError)?;
-  }
+  key_pair.sign(&RSA_PSS_SHA384, &random, &pre_auth, &mut signed_msg)
+    .map_err(RsaKeyErrors::SignError)?;
 
   let mut combined_vec = Vec::new();
   combined_vec.extend_from_slice(msg.as_bytes());
@@ -64,12 +62,12 @@ pub fn verify_paseto(token: &str, footer: Option<&str>, public_key: &[u8]) -> Re
 
   if has_provided_footer {
     if token_parts.len() < 4 {
-      return Err(GenericError::InvalidFooter {})?;
+      return Err(GenericError::InvalidFooter)?;
     }
     let footer_encoded = encode_config(footer_as_str.as_bytes(), URL_SAFE_NO_PAD);
 
     if ConstantTimeEquals(footer_encoded.as_bytes(), token_parts[3].as_bytes()).is_err() {
-      return Err(GenericError::InvalidFooter {})?;
+      return Err(GenericError::InvalidFooter)?;
     }
   }
 

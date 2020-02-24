@@ -1,11 +1,26 @@
 use thiserror::Error;
 
+/// A trait to easily convert sodium errors that are of the unit type
+/// to `SodiumErrors::FunctionError`.
+pub(crate) trait SodiumResult<T> {
+  /// Convert sodium errors that are of the unit type
+  /// to `SodiumErrors::FunctionError`.
+  fn map_sodium_err(self) -> Result<T, SodiumErrors>;
+}
+
+impl<T> SodiumResult<T> for Result<T, ()> {
+  #[inline]
+  fn map_sodium_err(self) -> Result<T, SodiumErrors> {
+    self.map_err(SodiumErrors::FunctionError)
+  }
+}
+
 #[derive(Error, Debug)]
 pub enum SodiumErrors {
   #[error("Invalid key for libsodium!")]
   InvalidKey,
   #[error("Function call to C Sodium Failed.")]
-  FunctionError,
+  FunctionError(()),
 }
 
 #[derive(Error, Debug)]
@@ -18,7 +33,7 @@ pub enum RsaKeyErrors {
     actual: usize,
   },
   #[error("Failed to generate signed RSA content")]
-  SignError,
+  SignError(#[source] ring::error::Unspecified),
 }
 
 #[derive(Error, Debug)]
@@ -30,9 +45,9 @@ pub enum GenericError {
   #[error("This token has an invalid footer.")]
   InvalidFooter,
   #[error("Failed to generate enough random bytes.")]
-  RandomError,
+  RandomError(#[source] ring::error::Unspecified),
   #[error("Failed to perform HKDF")]
-  BadHkdf,
+  BadHkdf(#[source] ring::error::Unspecified),
   #[error("JSON serialization error: {0}")]
   JsonSerializationError(#[from] serde_json::error::Error),
   #[error("RSA key error: {0}")]

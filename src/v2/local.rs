@@ -1,6 +1,6 @@
 //! An Implementation of Paseto V2 "local" tokens (or tokens that are encrypted with a shared secret).
 
-use crate::errors::{GenericError, SodiumErrors};
+use crate::errors::{GenericError, SodiumErrors, SodiumResult};
 use crate::pae::pae;
 
 use base64::{decode_config, encode_config, URL_SAFE_NO_PAD};
@@ -15,10 +15,7 @@ use sodiumoxide::crypto::generichash::State as GenericHashState;
 pub fn local_paseto(msg: &str, footer: Option<&str>, key: &[u8]) -> Result<String, GenericError> {
   let rng = SystemRandom::new();
   let mut buff: [u8; 24] = [0u8; 24];
-  let res = rng.fill(&mut buff);
-  if res.is_err() {
-    return Err(GenericError::RandomError {})?;
-  }
+  rng.fill(&mut buff).map_err(GenericError::RandomError)?;
 
   underlying_local_paseto(msg, footer, &buff, key)
 }
@@ -34,24 +31,15 @@ fn underlying_local_paseto(msg: &str, footer: Option<&str>, nonce_key: &[u8; 24]
   let footer_frd = footer.unwrap_or("");
   // Specify result type to give rust compiler hints on types.
   let res: Result<(Nonce, Vec<u8>), GenericError> = {
-    if let Ok(mut state) = GenericHashState::new(24, Some(nonce_key)) {
-      if let Ok(_) = state.update(msg.as_bytes()) {
-        if let Ok(finalized) = state.finalize() {
-          let ref_finalized = finalized.as_ref();
-          if let Some(nonce) = Nonce::from_slice(ref_finalized) {
-            let to_return: (Nonce, Vec<u8>) = (nonce, Vec::from(ref_finalized));
-            Ok(to_return)
-          } else {
-            Err(SodiumErrors::FunctionError)?
-          }
-        } else {
-          Err(SodiumErrors::FunctionError)?
-        }
-      } else {
-        Err(SodiumErrors::FunctionError)?
-      }
+    let mut state = GenericHashState::new(24, Some(nonce_key)).map_sodium_err()?;
+    state.update(msg.as_bytes()).map_sodium_err()?;
+    let finalized = state.finalize().map_sodium_err()?;
+    let ref_finalized = finalized.as_ref();
+    if let Some(nonce) = Nonce::from_slice(ref_finalized) {
+      let to_return: (Nonce, Vec<u8>) = (nonce, Vec::from(ref_finalized));
+      Ok(to_return)
     } else {
-      Err(SodiumErrors::FunctionError)?
+      Err(SodiumErrors::FunctionError(()))?
     }
   };
   let (nonce, nonce_vec) = res?;
@@ -102,12 +90,12 @@ pub fn decrypt_paseto(token: &str, footer: Option<&str>, key: &[u8]) -> Result<S
 
   if is_footer_some {
     if token_parts.len() < 4 {
-      return Err(GenericError::InvalidFooter {})?;
+      return Err(GenericError::InvalidFooter)?;
     }
     let as_base64 = encode_config(footer_str.as_bytes(), URL_SAFE_NO_PAD);
 
     if ConstantTimeEquals(as_base64.as_bytes(), token_parts[3].as_bytes()).is_err() {
-      return Err(GenericError::InvalidFooter {})?;
+      return Err(GenericError::InvalidFooter)?;
     }
   }
 
@@ -131,11 +119,8 @@ pub fn decrypt_paseto(token: &str, footer: Option<&str>, key: &[u8]) -> Result<S
   let nonce_obj = nonce_obj.unwrap();
   let key_obj = key_obj.unwrap();
 
-  let decrypted = Decrypt(ciphertext, Some(&pre_auth), &nonce_obj, &key_obj);
-  if decrypted.is_err() {
-    return Err(SodiumErrors::FunctionError {})?;
-  }
-  let decrypted = decrypted.unwrap();
+  let decrypted = Decrypt(ciphertext, Some(&pre_auth), &nonce_obj, &key_obj)
+    .map_sodium_err()?;
 
   Ok(String::from_utf8(decrypted)?)
 }

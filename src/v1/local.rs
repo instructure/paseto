@@ -18,10 +18,7 @@ use ring::rand::{SecureRandom, SystemRandom};
 pub fn local_paseto(msg: &str, footer: Option<&str>, key: &[u8]) -> Result<String, GenericError> {
   let rng = SystemRandom::new();
   let mut buff: [u8; 32] = [0u8; 32];
-  let res = rng.fill(&mut buff);
-  if res.is_err() {
-    return Err(GenericError::RandomError {})?;
-  }
+  rng.fill(&mut buff).map_err(GenericError::RandomError)?;
 
   underlying_local_paseto(msg, footer, &buff, key)
 }
@@ -47,16 +44,10 @@ fn underlying_local_paseto(msg: &str, footer: Option<&str>, random_nonce: &[u8],
   let ak_info = ["paseto-auth-key-for-aead".as_bytes()];
 
   let extracted = hkdf_salt.extract(key);
-  let ek_result = extracted.expand(&ek_info, CustomKeyWrapper(32));
-  let ak_result = extracted.expand(&ak_info, CustomKeyWrapper(32));
-  if ek_result.is_err() || ak_result.is_err() {
-    return Err(GenericError::BadHkdf)?;
-  }
-  let ek_fill_result = ek_result.unwrap().fill(&mut ek);
-  let ak_fill_result = ak_result.unwrap().fill(&mut ak);
-  if ek_fill_result.is_err() || ak_fill_result.is_err() {
-    return Err(GenericError::BadHkdf)?;
-  }
+  let ek_result = extracted.expand(&ek_info, CustomKeyWrapper(32)).map_err(GenericError::BadHkdf)?;
+  let ak_result = extracted.expand(&ak_info, CustomKeyWrapper(32)).map_err(GenericError::BadHkdf)?;
+  ek_result.fill(&mut ek).map_err(GenericError::BadHkdf)?;
+  ak_result.fill(&mut ak).map_err(GenericError::BadHkdf)?;
 
   let cipher = symm::Cipher::aes_256_ctr();
   let crypted = symm::encrypt(cipher, &ek, Some(&ctr_nonce), msg.as_bytes())?;
@@ -107,12 +98,12 @@ pub fn decrypt_paseto(token: &str, footer: Option<&str>, key: &[u8]) -> Result<S
 
   if is_footer_some {
     if token_parts.len() < 4 {
-      return Err(GenericError::InvalidFooter {})?;
+      return Err(GenericError::InvalidFooter)?;
     }
     let as_base64 = encode_config(footer_str.as_bytes(), URL_SAFE_NO_PAD);
 
     if ConstantTimeEquals(as_base64.as_bytes(), token_parts[3].as_bytes()).is_err() {
-      return Err(GenericError::InvalidFooter {})?;
+      return Err(GenericError::InvalidFooter)?;
     }
   }
 
@@ -137,16 +128,10 @@ pub fn decrypt_paseto(token: &str, footer: Option<&str>, key: &[u8]) -> Result<S
   let ek_info = ["paseto-encryption-key".as_bytes()];
   let ak_info = ["paseto-auth-key-for-aead".as_bytes()];
 
-  let ek_result = extracted.expand(&ek_info, CustomKeyWrapper(32));
-  let ak_result = extracted.expand(&ak_info, CustomKeyWrapper(32));
-  if ek_result.is_err() || ak_result.is_err() {
-    return Err(GenericError::BadHkdf)?;
-  }
-  let ek_fill_result = ek_result.unwrap().fill(&mut ek);
-  let ak_fill_result = ak_result.unwrap().fill(&mut ak);
-  if ek_fill_result.is_err() || ak_fill_result.is_err() {
-    return Err(GenericError::BadHkdf)?;
-  }
+  let ek_result = extracted.expand(&ek_info, CustomKeyWrapper(32)).map_err(GenericError::BadHkdf)?;
+  let ak_result = extracted.expand(&ak_info, CustomKeyWrapper(32)).map_err(GenericError::BadHkdf)?;
+  ek_result.fill(&mut ek).map_err(GenericError::BadHkdf)?;
+  ak_result.fill(&mut ak).map_err(GenericError::BadHkdf)?;
 
   let pre_auth = pae(vec![
     Vec::from("v1.local.".as_bytes()),
@@ -160,7 +145,7 @@ pub fn decrypt_paseto(token: &str, footer: Option<&str>, key: &[u8]) -> Result<S
   let raw_bytes_from_hmac = signed.as_ref();
 
   if ConstantTimeEquals(&raw_bytes_from_hmac, mac).is_err() {
-    return Err(GenericError::InvalidToken {})?;
+    return Err(GenericError::InvalidToken)?;
   }
 
   let cipher = symm::Cipher::aes_256_ctr();
