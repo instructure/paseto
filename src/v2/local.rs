@@ -29,25 +29,15 @@ pub fn local_paseto(msg: &str, footer: Option<&str>, key: &[u8]) -> Result<Strin
 fn underlying_local_paseto(msg: &str, footer: Option<&str>, nonce_key: &[u8; 24], key: &[u8]) -> Result<String, GenericError> {
   let header = "v2.local.";
   let footer_frd = footer.unwrap_or("");
-  // Specify result type to give rust compiler hints on types.
-  let res: Result<(Nonce, Vec<u8>), GenericError> = {
-    let mut state = GenericHashState::new(24, Some(nonce_key)).map_sodium_err()?;
-    state.update(msg.as_bytes()).map_sodium_err()?;
-    let finalized = state.finalize().map_sodium_err()?;
-    let ref_finalized = finalized.as_ref();
-    if let Some(nonce) = Nonce::from_slice(ref_finalized) {
-      let to_return: (Nonce, Vec<u8>) = (nonce, Vec::from(ref_finalized));
-      Ok(to_return)
-    } else {
-      Err(SodiumErrors::FunctionError(()))?
-    }
-  };
-  let (nonce, nonce_vec) = res?;
-  let key_obj = Key::from_slice(key);
-  if key_obj.is_none() {
-    return Err(SodiumErrors::InvalidKey)?;
-  }
-  let key_obj = key_obj.unwrap();
+
+  let mut state = GenericHashState::new(24, Some(nonce_key)).map_sodium_err()?;
+  state.update(msg.as_bytes()).map_sodium_err()?;
+  let finalized = state.finalize().map_sodium_err()?;
+  let ref_finalized = finalized.as_ref();
+  let nonce = Nonce::from_slice(ref_finalized).ok_or(SodiumErrors::FunctionError(()))?;
+  let nonce_vec = Vec::from(ref_finalized);
+
+  let key_obj = Key::from_slice(key).ok_or(SodiumErrors::InvalidKey)?;
 
   let header_as_vec = Vec::from(header.as_bytes());
   let footer_as_vec = Vec::from(footer_frd.as_bytes());
