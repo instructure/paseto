@@ -19,13 +19,13 @@ pub use self::builder::*;
 
 /// Wraps the two paseto public key types so we can just have a `validate_public_token`
 /// method without splitting the two implementations.
-pub enum PasetoPublicKey {
+pub enum PasetoPublicKey<'a> {
   #[cfg(feature = "v1")]
-  RSAPublicKey(Vec<u8>),
+  RSAPublicKey(&'a [u8]),
   #[cfg(feature = "v2")]
-  ED25519KeyPair(Ed25519KeyPair),
+  ED25519KeyPair(&'a Ed25519KeyPair),
   #[cfg(feature = "v2")]
-  ED25519PublicKey(Vec<u8>),
+  ED25519PublicKey(&'a [u8]),
 }
 
 /// Validates a potential json data blob, returning a JsonValue.
@@ -199,16 +199,16 @@ mod unit_tests {
     let dt = Utc.ymd(current_date_time.year() + 1, 7, 8).and_hms(9, 10, 11);
 
     let token = PasetoBuilder::new()
-      .set_encryption_key(Vec::from("YELLOW SUBMARINE, BLACK WIZARDRY".as_bytes()))
+      .set_encryption_key(&Vec::from("YELLOW SUBMARINE, BLACK WIZARDRY".as_bytes()))
       .set_issued_at(None)
-      .set_expiration(dt)
-      .set_issuer(String::from("issuer"))
-      .set_audience(String::from("audience"))
-      .set_jti(String::from("jti"))
-      .set_not_before(Utc::now())
-      .set_subject(String::from("test"))
-      .set_claim(String::from("claim"), json!(String::from("data")))
-      .set_footer(String::from("footer"))
+      .set_expiration(&dt)
+      .set_issuer("issuer")
+      .set_audience("audience")
+      .set_jti("jti")
+      .set_not_before(&Utc::now())
+      .set_subject("test")
+      .set_claim("claim", json!("data"))
+      .set_footer("footer")
       .build()
       .expect("Failed to construct paseto token w/ builder!");
 
@@ -226,16 +226,16 @@ mod unit_tests {
     let dt = Utc.ymd(current_date_time.year() - 1, 7, 8).and_hms(9, 10, 11);
 
     let token = PasetoBuilder::new()
-      .set_encryption_key(Vec::from("YELLOW SUBMARINE, BLACK WIZARDRY".as_bytes()))
+      .set_encryption_key(&Vec::from("YELLOW SUBMARINE, BLACK WIZARDRY".as_bytes()))
       .set_issued_at(None)
-      .set_expiration(dt)
-      .set_issuer(String::from("issuer"))
-      .set_audience(String::from("audience"))
-      .set_jti(String::from("jti"))
-      .set_not_before(Utc::now())
-      .set_subject(String::from("test"))
-      .set_claim(String::from("claim"), json!(String::from("data")))
-      .set_footer(String::from("footer"))
+      .set_expiration(&dt)
+      .set_issuer("issuer")
+      .set_audience("audience")
+      .set_jti("jti")
+      .set_not_before(&Utc::now())
+      .set_subject("test")
+      .set_claim("claim", json!("data"))
+      .set_footer("footer")
       .build()
       .expect("Failed to construct paseto token w/ builder!");
 
@@ -256,23 +256,22 @@ mod unit_tests {
     let sys_rand = SystemRandom::new();
     let key_pkcs8 = Ed25519KeyPair::generate_pkcs8(&sys_rand).expect("Failed to generate pkcs8 key!");
     let as_key = Ed25519KeyPair::from_pkcs8(key_pkcs8.as_ref()).expect("Failed to parse keypair");
-    let cloned_key = Ed25519KeyPair::from_pkcs8(key_pkcs8.as_ref()).expect("Failed to parse keypair");
 
     let token = PasetoBuilder::new()
-      .set_ed25519_key(as_key)
+      .set_ed25519_key(&as_key)
       .set_issued_at(None)
-      .set_expiration(dt)
-      .set_issuer(String::from("issuer"))
-      .set_audience(String::from("audience"))
-      .set_jti(String::from("jti"))
-      .set_not_before(Utc::now())
-      .set_subject(String::from("test"))
-      .set_claim(String::from("claim"), json!(String::from("data")))
-      .set_footer(String::from("footer"))
+      .set_expiration(&dt)
+      .set_issuer("issuer")
+      .set_audience("audience")
+      .set_jti("jti")
+      .set_not_before(&Utc::now())
+      .set_subject("test")
+      .set_claim("claim", json!("data"))
+      .set_footer("footer")
       .build()
       .expect("Failed to construct paseto token w/ builder!");
 
-    validate_public_token(&token, Some("footer"), &PasetoPublicKey::ED25519KeyPair(cloned_key))
+    validate_public_token(&token, Some("footer"), &PasetoPublicKey::ED25519KeyPair(&as_key))
       .expect("Failed to validate token!");
   }
 
@@ -285,26 +284,25 @@ mod unit_tests {
     let sys_rand = SystemRandom::new();
     let key_pkcs8 = Ed25519KeyPair::generate_pkcs8(&sys_rand).expect("Failed to generate pkcs8 key!");
     let as_key = Ed25519KeyPair::from_pkcs8(key_pkcs8.as_ref()).expect("Failed to parse keypair");
-    let cloned_key = Ed25519KeyPair::from_pkcs8(key_pkcs8.as_ref()).expect("Failed to parse keypair");
 
     let token = PasetoBuilder::new()
-      .set_ed25519_key(as_key)
+      .set_ed25519_key(&as_key)
       .set_issued_at(None)
-      .set_expiration(dt)
-      .set_issuer(String::from("issuer"))
-      .set_audience(String::from("audience"))
-      .set_jti(String::from("jti"))
-      .set_not_before(Utc::now())
-      .set_subject(String::from("test"))
-      .set_claim(String::from("claim"), json!(String::from("data")))
-      .set_footer(String::from("footer"))
+      .set_expiration(&dt)
+      .set_issuer("issuer")
+      .set_audience("audience")
+      .set_jti("jti")
+      .set_not_before(&Utc::now())
+      .set_subject("test")
+      .set_claim("claim", json!("data"))
+      .set_footer("footer")
       .build()
       .expect("Failed to construct paseto token w/ builder!");
 
     validate_public_token(
       &token,
       Some("footer"),
-      &PasetoPublicKey::ED25519PublicKey(Vec::from(cloned_key.public_key().as_ref())),
+      &PasetoPublicKey::ED25519PublicKey(as_key.public_key().as_ref()),
     )
     .expect("Failed to validate token!");
   }
@@ -318,22 +316,21 @@ mod unit_tests {
     let sys_rand = SystemRandom::new();
     let key_pkcs8 = Ed25519KeyPair::generate_pkcs8(&sys_rand).expect("Failed to generate pkcs8 key!");
     let as_key = Ed25519KeyPair::from_pkcs8(key_pkcs8.as_ref()).expect("Failed to parse keypair");
-    let cloned_key = Ed25519KeyPair::from_pkcs8(key_pkcs8.as_ref()).expect("Failed to parse keypair");
 
     let token = PasetoBuilder::new()
-      .set_ed25519_key(as_key)
+      .set_ed25519_key(&as_key)
       .set_issued_at(None)
-      .set_expiration(dt)
-      .set_issuer(String::from("issuer"))
-      .set_audience(String::from("audience"))
-      .set_jti(String::from("jti"))
-      .set_not_before(Utc::now())
-      .set_subject(String::from("test"))
-      .set_claim(String::from("claim"), json!(String::from("data")))
-      .set_footer(String::from("footer"))
+      .set_expiration(&dt)
+      .set_issuer("issuer")
+      .set_audience("audience")
+      .set_jti("jti")
+      .set_not_before(&Utc::now())
+      .set_subject("test")
+      .set_claim("claim", json!("data"))
+      .set_footer("footer")
       .build()
       .expect("Failed to construct paseto token w/ builder!");
 
-    assert!(validate_public_token(&token, Some("footer"), &PasetoPublicKey::ED25519KeyPair(cloned_key)).is_err());
+    assert!(validate_public_token(&token, Some("footer"), &PasetoPublicKey::ED25519KeyPair(&as_key)).is_err());
   }
 }

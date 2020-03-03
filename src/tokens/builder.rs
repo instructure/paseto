@@ -20,24 +20,24 @@ use serde_json::{json, to_string, Value};
 use std::collections::HashMap;
 
 /// A paseto builder.
-pub struct PasetoBuilder {
+pub struct PasetoBuilder<'a> {
   /// Set the footer to use for this token.
-  footer: Option<String>,
+  footer: Option<&'a str>,
   /// The encryption key to use. If present WILL use LOCAL tokens (or shared key encryption).
-  encryption_key: Option<Vec<u8>>,
+  encryption_key: Option<&'a [u8]>,
   /// The RSA Key pairs in DER format, for V1 Public Tokens.
   #[cfg(feature = "v1")]
-  rsa_key: Option<Vec<u8>>,
+  rsa_key: Option<&'a [u8]>,
   /// The ED25519 Key Pair, for V2 Public Tokens.
   #[cfg(feature = "v2")]
-  ed_key: Option<Ed25519KeyPair>,
+  ed_key: Option<&'a Ed25519KeyPair>,
   /// Any extra claims you want to store in your json.
-  extra_claims: HashMap<String, Value>,
+  extra_claims: HashMap<&'a str, Value>,
 }
 
-impl PasetoBuilder {
+impl<'a> PasetoBuilder<'a> {
   /// Creates a new Paseto builder.
-  pub fn new() -> PasetoBuilder {
+  pub fn new() -> PasetoBuilder<'a> {
     PasetoBuilder {
       footer: None,
       encryption_key: None,
@@ -50,7 +50,7 @@ impl PasetoBuilder {
   }
 
   /// Builds a token.
-  pub fn build(self) -> Result<String, Error> {
+  pub fn build(&self) -> Result<String, Error> {
     let strd_msg = to_string(&self.extra_claims)?;
 
     #[cfg(feature = "v2")]
@@ -91,83 +91,83 @@ impl PasetoBuilder {
 }
 
 #[cfg(feature = "v1")]
-impl PasetoBuilder {
+impl<'a> PasetoBuilder<'a> {
   /// Sets the RSA Key on a Paseto builder.
   ///
   /// NOTE: This will not be used if you set a symmetric encryption key, or if you specify an Ed25519 key pair.
-  pub fn set_rsa_key(mut self, private_key_der: Vec<u8>) -> Self {
+  pub fn set_rsa_key(&'a mut self, private_key_der: &'a [u8]) -> &'a mut Self {
     self.rsa_key = Some(private_key_der);
     self
   }
 }
 
 #[cfg(feature = "v2")]
-impl PasetoBuilder {
+impl<'a> PasetoBuilder<'a> {
   /// Sets the ED25519 Key pair.
   ///
   /// NOTE: This will not be used if you set a symmetric encryption key.
-  pub fn set_ed25519_key(mut self, key_pair: Ed25519KeyPair) -> Self {
+  pub fn set_ed25519_key(&'a mut self, key_pair: &'a Ed25519KeyPair) -> &'a mut Self {
     self.ed_key = Some(key_pair);
     self
   }
 }
 
-impl PasetoBuilder {
+impl<'a> PasetoBuilder<'a> {
   /// Sets the encryption key to use for the paseto token.
   ///
   /// NOTE: If you set this we _*will*_ use a local token.
-  pub fn set_encryption_key(mut self, encryption_key: Vec<u8>) -> Self {
+  pub fn set_encryption_key(&'a mut self, encryption_key: &'a [u8]) -> &'a mut Self {
     self.encryption_key = Some(encryption_key);
     self
   }
 
   //// Sets the footer to use for this token.
-  pub fn set_footer(mut self, footer: String) -> Self {
+  pub fn set_footer(&'a mut self, footer: &'a str) -> &'a mut Self {
     self.footer = Some(footer);
     self
   }
 
   /// Sets an arbitrary claim (a key inside the json token).
-  pub fn set_claim(mut self, key: String, value: Value) -> Self {
+  pub fn set_claim(&'a mut self, key: &'a str, value: Value) -> &'a mut Self {
     self.extra_claims.insert(key, value);
     self
   }
 
   /// Sets the audience for this token.
-  pub fn set_audience(self, audience: String) -> Self {
-    self.set_claim(String::from("aud"), json!(audience))
+  pub fn set_audience(&'a mut self, audience: &str) -> &'a mut Self {
+    self.set_claim("aud", json!(audience))
   }
 
   /// Sets the expiration date for this token.
-  pub fn set_expiration(self, expiration: DateTime<Utc>) -> Self {
-    self.set_claim(String::from("exp"), json!(expiration))
+  pub fn set_expiration(&'a mut self, expiration: &DateTime<Utc>) -> &'a mut Self {
+    self.set_claim("exp", json!(expiration))
   }
 
   /// Sets the time this token was issued at.
   ///
   /// issued_at defaults to: Utc::now();
-  pub fn set_issued_at(self, issued_at: Option<DateTime<Utc>>) -> Self {
-    self.set_claim(String::from("iat"), json!(issued_at.unwrap_or(Utc::now())))
+  pub fn set_issued_at(&'a mut self, issued_at: Option<DateTime<Utc>>) -> &'a mut Self {
+    self.set_claim("iat", json!(issued_at.unwrap_or(Utc::now())))
   }
 
   /// Sets the issuer for this token.
-  pub fn set_issuer(self, issuer: String) -> Self {
-    self.set_claim(String::from("iss"), json!(issuer))
+  pub fn set_issuer(&'a mut self, issuer: &str) -> &'a mut Self {
+    self.set_claim("iss", json!(issuer))
   }
 
   /// Sets the JTI ID for this token.
-  pub fn set_jti(self, id: String) -> Self {
-    self.set_claim(String::from("jti"), json!(id))
+  pub fn set_jti(&'a mut self, id: &str) -> &'a mut Self {
+    self.set_claim("jti", json!(id))
   }
 
   /// Sets the not before time.
-  pub fn set_not_before(self, not_before: DateTime<Utc>) -> Self {
-    self.set_claim(String::from("nbf"), json!(not_before))
+  pub fn set_not_before(&'a mut self, not_before: &DateTime<Utc>) -> &'a mut Self {
+    self.set_claim("nbf", json!(not_before))
   }
 
   /// Sets the subject for this token.
-  pub fn set_subject(self, subject: String) -> Self {
-    self.set_claim(String::from("sub"), json!(subject))
+  pub fn set_subject(&'a mut self, subject: &str) -> &'a mut Self {
+    self.set_claim("sub", json!(subject))
   }
 }
 
@@ -186,16 +186,16 @@ mod unit_test {
   #[cfg(feature = "v2")]
   fn can_construct_a_token() {
     let token = PasetoBuilder::new()
-      .set_encryption_key(Vec::from("YELLOW SUBMARINE, BLACK WIZARDRY".as_bytes()))
+      .set_encryption_key(&Vec::from("YELLOW SUBMARINE, BLACK WIZARDRY".as_bytes()))
       .set_issued_at(None)
-      .set_expiration(Utc::now())
-      .set_issuer(String::from("issuer"))
-      .set_audience(String::from("audience"))
-      .set_jti(String::from("jti"))
-      .set_not_before(Utc::now())
-      .set_subject(String::from("test"))
-      .set_claim(String::from("claim"), json!(String::from("data")))
-      .set_footer(String::from("footer"))
+      .set_expiration(&Utc::now())
+      .set_issuer("issuer")
+      .set_audience("audience")
+      .set_jti("jti")
+      .set_not_before(&Utc::now())
+      .set_subject("test")
+      .set_claim("claim", json!("data"))
+      .set_footer("footer")
       .build()
       .expect("Failed to construct paseto token w/ builder!");
 
