@@ -9,17 +9,18 @@ use failure::Error;
 use ring::constant_time::verify_slices_are_equal as ConstantTimeEquals;
 use ring::signature::{Ed25519KeyPair, UnparsedPublicKey, ED25519};
 
+const HEADER: &str = "v2.public.";
+
 /// Sign a "v2.public" paseto token.
 ///
 /// Returns a result of a string if signing was successful.
 pub fn public_paseto(msg: &str, footer: Option<&str>, key_pair: &Ed25519KeyPair) -> Result<String, Error> {
-  let header = "v2.public.";
   let footer_frd = footer.unwrap_or("");
 
-  let pre_auth = pae(vec![
-    Vec::from(header.as_bytes()),
-    Vec::from(msg.as_bytes()),
-    Vec::from(footer_frd.as_bytes()),
+  let pre_auth = pae(&[
+    HEADER.as_bytes(),
+    msg.as_bytes(),
+    footer_frd.as_bytes(),
   ]);
 
   let sig = key_pair.sign(&pre_auth);
@@ -27,11 +28,11 @@ pub fn public_paseto(msg: &str, footer: Option<&str>, key_pair: &Ed25519KeyPair)
   m_and_sig.extend_from_slice(sig.as_ref());
 
   let token = if footer_frd.is_empty() {
-    format!("{}{}", header, encode_config(&m_and_sig, URL_SAFE_NO_PAD))
+    format!("{}{}", HEADER, encode_config(&m_and_sig, URL_SAFE_NO_PAD))
   } else {
     format!(
       "{}{}.{}",
-      header,
+      HEADER,
       encode_config(&m_and_sig, URL_SAFE_NO_PAD),
       encode_config(footer_frd.as_bytes(), URL_SAFE_NO_PAD)
     )
@@ -71,10 +72,10 @@ pub fn verify_paseto(token: &str, footer: Option<&str>, public_key: &[u8]) -> Re
   let decoded_len = decoded.len();
   let (msg, sig) = decoded.split_at(decoded_len - 64);
 
-  let pre_auth = pae(vec![
-    Vec::from("v2.public.".as_bytes()),
-    Vec::from(msg),
-    Vec::from(footer_as_str.as_bytes()),
+  let pre_auth = pae(&[
+    HEADER.as_bytes(),
+    msg,
+    footer_as_str.as_bytes(),
   ]);
 
   let pk_unparsed = UnparsedPublicKey::new(&ED25519, public_key);

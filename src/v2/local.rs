@@ -10,6 +10,8 @@ use ring::rand::{SecureRandom, SystemRandom};
 use sodiumoxide::crypto::aead::xchacha20poly1305_ietf::{open as Decrypt, seal as Encrypt, Key, Nonce};
 use sodiumoxide::crypto::generichash::State as GenericHashState;
 
+const HEADER: &str = "v2.local.";
+
 /// Encrypt a "v2.local" paseto token.
 ///
 /// Returns a result of a string if encryption was successful.
@@ -31,20 +33,43 @@ pub fn local_paseto(msg: &str, footer: Option<&str>, key: &[u8]) -> Result<Strin
 /// `nonce_key` - The key to the nonce, should be securely generated.
 /// `key` - The key to encrypt the message with.
 fn underlying_local_paseto(msg: &str, footer: Option<&str>, nonce_key: &[u8; 24], key: &[u8]) -> Result<String, Error> {
-  let header = "v2.local.";
   let footer_frd = footer.unwrap_or("");
-  // Specify result type to give rust compiler hints on types.
-  let res: Result<(Nonce, Vec<u8>), Error> = {
-    if let Ok(mut state) = GenericHashState::new(24, Some(nonce_key)) {
-      if let Ok(_) = state.update(msg.as_bytes()) {
-        if let Ok(finalized) = state.finalize() {
-          let ref_finalized = finalized.as_ref();
-          if let Some(nonce) = Nonce::from_slice(ref_finalized) {
-            let to_return: (Nonce, Vec<u8>) = (nonce, Vec::from(ref_finalized));
-            Ok(to_return)
-          } else {
-            Err(SodiumErrors::FunctionError {})?
+
+  if let Ok(mut state) = GenericHashState::new(24, Some(nonce_key)) {
+    if let Ok(_) = state.update(msg.as_bytes()) {
+      if let Ok(finalized) = state.finalize() {
+        let nonce_bytes = finalized.as_ref();
+        if let Some(nonce) = Nonce::from_slice(nonce_bytes) {
+          let key_obj = Key::from_slice(key);
+          if key_obj.is_none() {
+            return Err(SodiumErrors::InvalidKey {})?;
           }
+          let key_obj = key_obj.unwrap();
+
+          let pre_auth = pae(&[
+            HEADER.as_bytes(),
+            &nonce_bytes,
+            footer_frd.as_bytes(),
+          ]);
+
+          let crypted = Encrypt(msg.as_bytes(), Some(pre_auth.as_ref()), &nonce, &key_obj);
+
+          let mut n_and_c = Vec::new();
+          n_and_c.extend_from_slice(&nonce_bytes);
+          n_and_c.extend_from_slice(&crypted);
+
+          let token = if !footer_frd.is_empty() {
+            format!(
+              "{}{}.{}",
+              HEADER,
+              encode_config(&n_and_c, URL_SAFE_NO_PAD),
+              encode_config(footer_frd.as_bytes(), URL_SAFE_NO_PAD)
+            )
+          } else {
+            format!("{}{}", HEADER, encode_config(&n_and_c, URL_SAFE_NO_PAD))
+          };
+
+          Ok(token)
         } else {
           Err(SodiumErrors::FunctionError {})?
         }
@@ -54,37 +79,9 @@ fn underlying_local_paseto(msg: &str, footer: Option<&str>, nonce_key: &[u8; 24]
     } else {
       Err(SodiumErrors::FunctionError {})?
     }
-  };
-  let (nonce, nonce_vec) = res?;
-  let key_obj = Key::from_slice(key);
-  if key_obj.is_none() {
-    return Err(SodiumErrors::InvalidKey {})?;
-  }
-  let key_obj = key_obj.unwrap();
-
-  let header_as_vec = Vec::from(header.as_bytes());
-  let footer_as_vec = Vec::from(footer_frd.as_bytes());
-
-  let pre_auth = pae(vec![header_as_vec, nonce_vec.clone(), footer_as_vec]);
-
-  let crypted = Encrypt(msg.as_bytes(), Some(pre_auth.as_ref()), &nonce, &key_obj);
-
-  let mut n_and_c = Vec::new();
-  n_and_c.extend_from_slice(&nonce_vec);
-  n_and_c.extend_from_slice(&crypted);
-
-  let token = if !footer_frd.is_empty() {
-    format!(
-      "{}{}.{}",
-      header,
-      encode_config(&n_and_c, URL_SAFE_NO_PAD),
-      encode_config(footer_frd.as_bytes(), URL_SAFE_NO_PAD)
-    )
   } else {
-    format!("{}{}", header, encode_config(&n_and_c, URL_SAFE_NO_PAD))
-  };
-
-  Ok(token)
+    Err(SodiumErrors::FunctionError {})?
+  }
 }
 
 /// Decrypt a Paseto TOKEN, validating against an optional footer.
@@ -119,10 +116,11 @@ pub fn decrypt_paseto(token: &str, footer: Option<&str>, key: &[u8]) -> Result<S
   let mut decoded = decode_config(token_parts[2].as_bytes(), URL_SAFE_NO_PAD)?;
   let (nonce, ciphertext) = decoded.split_at_mut(24);
 
-  let static_header = Vec::from("v2.local.".as_bytes());
-  let vecd_nonce = nonce.to_vec();
-  let vecd_footer = Vec::from(footer_str.as_bytes());
-  let pre_auth = pae(vec![static_header, vecd_nonce, vecd_footer]);
+  let pre_auth = pae(&[
+    HEADER.as_bytes(),
+    nonce,
+    footer_str.as_bytes(),
+  ]);
 
   let nonce_obj = Nonce::from_slice(nonce);
   let key_obj = Key::from_slice(key);

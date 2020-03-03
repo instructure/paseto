@@ -13,6 +13,8 @@ use ring::hkdf::{Salt, HKDF_SHA384};
 use ring::hmac::{sign, Key, HMAC_SHA384};
 use ring::rand::{SecureRandom, SystemRandom};
 
+const HEADER: &str = "v1.local.";
+
 /// Encrypt a "v1.local" paseto token.
 ///
 /// Returns a result of a string if encryption was successful.
@@ -34,7 +36,6 @@ pub fn local_paseto(msg: &str, footer: Option<&str>, key: &[u8]) -> Result<Strin
 /// `random_nonce` - The random nonce.
 /// `key` - The key used for encryption.
 fn underlying_local_paseto(msg: &str, footer: Option<&str>, random_nonce: &[u8], key: &[u8]) -> Result<String, Error> {
-  let header = "v1.local.";
   let footer_frd = footer.unwrap_or("");
   let true_nonce = calculate_hashed_nonce(msg.as_bytes(), random_nonce);
 
@@ -62,11 +63,11 @@ fn underlying_local_paseto(msg: &str, footer: Option<&str>, random_nonce: &[u8],
   let cipher = symm::Cipher::aes_256_ctr();
   let crypted = symm::encrypt(cipher, &ek, Some(&ctr_nonce), msg.as_bytes())?;
 
-  let pre_auth = pae(vec![
-    Vec::from(header.as_bytes()),
-    true_nonce.clone(),
-    crypted.clone(),
-    Vec::from(footer_frd.as_bytes()),
+  let pre_auth = pae(&[
+    HEADER.as_bytes(),
+    &true_nonce,
+    &crypted,
+    footer_frd.as_bytes(),
   ]);
 
   let mac_key = Key::new(HMAC_SHA384, &ak);
@@ -79,11 +80,11 @@ fn underlying_local_paseto(msg: &str, footer: Option<&str>, random_nonce: &[u8],
   concated_together.extend_from_slice(&raw_bytes_from_hmac);
 
   let token = if footer_frd.is_empty() {
-    format!("{}{}", header, encode_config(&concated_together, URL_SAFE_NO_PAD))
+    format!("{}{}", HEADER, encode_config(&concated_together, URL_SAFE_NO_PAD))
   } else {
     format!(
       "{}{}.{}",
-      header,
+      HEADER,
       encode_config(&concated_together, URL_SAFE_NO_PAD),
       encode_config(footer_frd.as_bytes(), URL_SAFE_NO_PAD)
     )
@@ -149,11 +150,11 @@ pub fn decrypt_paseto(token: &str, footer: Option<&str>, key: &[u8]) -> Result<S
     return Err(GenericError::BadHkdf {})?;
   }
 
-  let pre_auth = pae(vec![
-    Vec::from("v1.local.".as_bytes()),
-    nonce.clone(),
-    Vec::from(ciphertext),
-    Vec::from(footer_str.as_bytes()),
+  let pre_auth = pae(&[
+    HEADER.as_bytes(),
+    &nonce,
+    ciphertext,
+    footer_str.as_bytes(),
   ]);
 
   let mac_key = Key::new(HMAC_SHA384, &ak);

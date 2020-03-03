@@ -10,6 +10,8 @@ use ring::constant_time::verify_slices_are_equal as ConstantTimeEquals;
 use ring::rand::SystemRandom;
 use ring::signature::{RsaKeyPair, UnparsedPublicKey, RSA_PSS_2048_8192_SHA384, RSA_PSS_SHA384};
 
+const HEADER: &str = "v1.public.";
+
 /// Sign a "v1.public" paseto token.
 ///
 /// Returns a result of a string if signing was successful.
@@ -19,11 +21,10 @@ pub fn public_paseto(msg: &str, footer: Option<&str>, key_pair: &RsaKeyPair) -> 
   }
   let footer_frd = footer.unwrap_or("");
 
-  let header = "v1.public.";
-  let pre_auth = pae(vec![
-    Vec::from(header.as_bytes()),
-    Vec::from(msg.as_bytes()),
-    Vec::from(footer_frd.as_bytes()),
+  let pre_auth = pae(&[
+    HEADER.as_bytes(),
+    msg.as_bytes(),
+    footer_frd.as_bytes(),
   ]);
   let random = SystemRandom::new();
 
@@ -38,11 +39,11 @@ pub fn public_paseto(msg: &str, footer: Option<&str>, key_pair: &RsaKeyPair) -> 
   combined_vec.extend_from_slice(&signed_msg);
 
   let token = if footer_frd.is_empty() {
-    format!("{}{}", header, encode_config(&combined_vec, URL_SAFE_NO_PAD))
+    format!("{}{}", HEADER, encode_config(&combined_vec, URL_SAFE_NO_PAD))
   } else {
     format!(
       "{}{}.{}",
-      header,
+      HEADER,
       encode_config(&combined_vec, URL_SAFE_NO_PAD),
       encode_config(footer_frd.as_bytes(), URL_SAFE_NO_PAD)
     )
@@ -82,10 +83,10 @@ pub fn verify_paseto(token: &str, footer: Option<&str>, public_key: &[u8]) -> Re
   let decoded_len = decoded.len();
   let (message, sig) = decoded.split_at(decoded_len - 256);
 
-  let pre_auth = pae(vec![
-    Vec::from("v1.public.".as_bytes()),
-    Vec::from(message),
-    Vec::from(footer_as_str.as_bytes()),
+  let pre_auth = pae(&[
+    HEADER.as_bytes(),
+    message,
+    footer_as_str.as_bytes(),
   ]);
 
   let pk_unparsed = UnparsedPublicKey::new(&RSA_PSS_2048_8192_SHA384, public_key);

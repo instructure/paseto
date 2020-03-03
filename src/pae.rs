@@ -19,12 +19,12 @@ fn le64(mut to_encode: u64) -> Vec<u8> {
 /// Paseto Specification v2.
 ///
 /// * `pieces` - The Pieces to concatenate, and encode together.
-pub fn pae(pieces: Vec<Vec<u8>>) -> Vec<u8> {
+pub fn pae<'a>(pieces: &'a [&'a [u8]]) -> Vec<u8> {
   let the_vec = le64(pieces.len() as u64);
 
   pieces.into_iter().fold(the_vec, |mut acc, piece| {
     acc.extend(le64(piece.len() as u64));
-    acc.extend(piece);
+    acc.extend(piece.into_iter());
     acc
   })
 }
@@ -43,24 +43,24 @@ mod unit_tests {
   #[test]
   fn test_pae() {
     // Constants taken from paseto source.
-    assert_eq!("0000000000000000", hex::encode(&pae(vec![])));
+    assert_eq!("0000000000000000", hex::encode(&pae(&[])));
     assert_eq!(
       "01000000000000000000000000000000",
-      hex::encode(&pae(vec![vec![]]))
+      hex::encode(&pae(&[&[]]))
     );
     assert_eq!(
       "020000000000000000000000000000000000000000000000",
-      hex::encode(&pae(vec![vec![], vec![]]))
+      hex::encode(&pae(&[&[], &[]]))
     );
     assert_eq!(
       "0100000000000000070000000000000050617261676f6e",
-      hex::encode(&pae(vec![Vec::from("Paragon".as_bytes())]))
+      hex::encode(&pae(&["Paragon".as_bytes()]))
     );
     assert_eq!(
       "0200000000000000070000000000000050617261676f6e0a00000000000000496e6974696174697665",
-      hex::encode(&pae(vec![
-        Vec::from("Paragon".as_bytes()),
-        Vec::from("Initiative".as_bytes()),
+      hex::encode(&pae(&[
+        "Paragon".as_bytes(),
+        "Initiative".as_bytes(),
       ]))
     );
   }
