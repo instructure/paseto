@@ -3,9 +3,9 @@
 pub mod errors;
 pub mod pae;
 
-#[cfg(feature = "easy_tokens")]
+#[cfg(any(feature = "easy_tokens_chrono", feature = "easy_tokens_time"))]
 pub mod tokens;
-#[cfg(feature = "easy_tokens")]
+#[cfg(any(feature = "easy_tokens_chrono", feature = "easy_tokens_time"))]
 pub use self::tokens::*;
 #[cfg(feature = "v1")]
 pub mod v1;

@@ -1,4 +1,4 @@
-#[cfg(all(feature = "v2", feature = "easy_tokens"))]
+#[cfg(all(feature = "v2", feature = "easy_tokens_chrono"))]
 use {
   chrono::prelude::*,
   ring::rand::SystemRandom,
@@ -7,7 +7,7 @@ use {
 };
 
 fn main() {
-  #[cfg(all(feature = "v2", feature = "easy_tokens"))]
+  #[cfg(all(feature = "v2", feature = "easy_tokens_chrono"))]
   {
     let current_date_time = Utc::now();
     let dt = Utc.ymd(current_date_time.year() + 1, 7, 8).and_hms(9, 10, 11);

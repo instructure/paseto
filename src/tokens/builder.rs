@@ -9,7 +9,10 @@ use crate::v1::public_paseto as V1Public;
 #[cfg(feature = "v2")]
 use crate::v2::{local_paseto as V2Local, public_paseto as V2Public};
 
+#[cfg(feature = "easy_tokens_chrono")]
 use chrono::prelude::*;
+#[cfg(feature = "easy_tokens_time")]
+use time::OffsetDateTime;
 use failure::Error;
 #[cfg(feature = "v2")]
 use ring::signature::Ed25519KeyPair;
@@ -139,15 +142,59 @@ impl<'a> PasetoBuilder<'a> {
   }
 
   /// Sets the expiration date for this token.
+  #[cfg(all(feature = "easy_tokens_chrono", not(feature = "easy_tokens_time")))]
   pub fn set_expiration(&'a mut self, expiration: &DateTime<Utc>) -> &'a mut Self {
+    self.set_claim("exp", json!(expiration))
+  }
+
+  /// Sets the expiration date for this token.
+  #[cfg(all(feature = "easy_tokens_time", not(feature = "easy_tokens_chrono")))]
+  pub fn set_expiration(&'a mut self, expiration: &OffsetDateTime) -> &'a mut Self {
+    self.set_claim("exp", json!(expiration))
+  }
+
+  /// Sets the expiration date for this token.
+  #[cfg(all(feature = "easy_tokens_chrono", feature = "easy_tokens_time"))]
+  pub fn set_expiration_chrono(&'a mut self, expiration: &DateTime<Utc>) -> &'a mut Self {
+    self.set_claim("exp", json!(expiration))
+  }
+
+  /// Sets the expiration date for this token.
+  #[cfg(all(feature = "easy_tokens_time", feature = "easy_tokens_time"))]
+  pub fn set_expiration_time(&'a mut self, expiration: &OffsetDateTime) -> &'a mut Self {
     self.set_claim("exp", json!(expiration))
   }
 
   /// Sets the time this token was issued at.
   ///
   /// issued_at defaults to: Utc::now();
+  #[cfg(all(feature = "easy_tokens_chrono", not(feature = "easy_tokens_time")))]
   pub fn set_issued_at(&'a mut self, issued_at: Option<DateTime<Utc>>) -> &'a mut Self {
     self.set_claim("iat", json!(issued_at.unwrap_or(Utc::now())))
+  }
+
+  /// Sets the time this token was issued at.
+  ///
+  /// issued_at defaults to: OffsetDateTime::now_utc();
+  #[cfg(all(feature = "easy_tokens_time", not(feature = "easy_tokens_chrono")))]
+  pub fn set_issued_at(&'a mut self, issued_at: Option<OffsetDateTime>) -> &'a mut Self {
+    self.set_claim("iat", json!(issued_at.unwrap_or(OffsetDateTime::now_utc())))
+  }
+
+  /// Sets the time this token was issued at.
+  ///
+  /// issued_at defaults to: Utc::now();
+  #[cfg(all(feature = "easy_tokens_chrono", feature = "easy_tokens_time"))]
+  pub fn set_issued_at_chrono(&'a mut self, issued_at: Option<DateTime<Utc>>) -> &'a mut Self {
+    self.set_claim("iat", json!(issued_at.unwrap_or(Utc::now())))
+  }
+
+  /// Sets the time this token was issued at.
+  ///
+  /// issued_at defaults to: OffsetDateTime::now_utc();
+  #[cfg(all(feature = "easy_tokens_time", feature = "easy_tokens_time"))]
+  pub fn set_issued_at_time(&'a mut self, issued_at: Option<OffsetDateTime>) -> &'a mut Self {
+    self.set_claim("iat", json!(issued_at.unwrap_or(OffsetDateTime::now_utc())))
   }
 
   /// Sets the issuer for this token.
@@ -161,7 +208,26 @@ impl<'a> PasetoBuilder<'a> {
   }
 
   /// Sets the not before time.
+  #[cfg(all(feature = "easy_tokens_chrono", not(feature = "easy_tokens_time")))]
   pub fn set_not_before(&'a mut self, not_before: &DateTime<Utc>) -> &'a mut Self {
+    self.set_claim("nbf", json!(not_before))
+  }
+
+  /// Sets the not before time.
+  #[cfg(all(feature = "easy_tokens_time", not(feature = "easy_tokens_chrono")))]
+  pub fn set_not_before(&'a mut self, not_before: &OffsetDateTime) -> &'a mut Self {
+    self.set_claim("nbf", json!(not_before))
+  }
+
+  /// Sets the not before time.
+  #[cfg(all(feature = "easy_tokens_chrono", feature = "easy_tokens_time"))]
+  pub fn set_not_before_chrono(&'a mut self, not_before: &DateTime<Utc>) -> &'a mut Self {
+    self.set_claim("nbf", json!(not_before))
+  }
+
+  /// Sets the not before time.
+  #[cfg(all(feature = "easy_tokens_time", feature = "easy_tokens_time"))]
+  pub fn set_not_before_time(&'a mut self, not_before: &OffsetDateTime) -> &'a mut Self {
     self.set_claim("nbf", json!(not_before))
   }
 
