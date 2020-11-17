@@ -31,6 +31,13 @@ pub enum PasetoPublicKey<'a> {
   ED25519PublicKey(&'a [u8]),
 }
 
+/// Specifies which time crate will be used as backend for validating a token's
+/// datetimes, i.e. issued_at. The available backends are [`Chrono`] and [`Time`],
+/// the can be enabled via the features `easy_tokens_chrono` and `easy_tokens_time`.
+/// The default feature and backend is [`Chrono`].
+///
+/// [`Chrono`]: https://docs.rs/chrono/*/chrono/index.html
+/// [`Time`]: https://docs.rs/time/*/time/index.html
 pub enum TimeBackend {
   #[cfg(feature = "easy_tokens_chrono")]
   Chrono,

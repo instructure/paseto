@@ -240,16 +240,14 @@ impl<'a> PasetoBuilder<'a> {
 #[cfg(test)]
 mod unit_test {
   #[cfg(feature = "v2")]
-  use super::*;
-
-  #[cfg(feature = "v2")]
-  use crate::v2::local::decrypt_paseto as V2Decrypt;
-
-  #[cfg(feature = "v2")]
-  use serde_json::from_str as ParseJson;
+  use {
+    super::*,
+    crate::v2::local::decrypt_paseto as V2Decrypt,
+    serde_json::from_str as ParseJson
+  };
 
   #[test]
-  #[cfg(feature = "v2")]
+  #[cfg(all(feature = "v2", feature = "easy_tokens_chrono"))]
   fn can_construct_a_token() {
     let token = PasetoBuilder::new()
       .set_encryption_key(&Vec::from("YELLOW SUBMARINE, BLACK WIZARDRY".as_bytes()))
@@ -259,6 +257,41 @@ mod unit_test {
       .set_audience("audience")
       .set_jti("jti")
       .set_not_before(&Utc::now())
+      .set_subject("test")
+      .set_claim("claim", json!("data"))
+      .set_footer("footer")
+      .build()
+      .expect("Failed to construct paseto token w/ builder!");
+
+    let decrypted_token = V2Decrypt(
+      &token,
+      Some("footer"),
+      &mut Vec::from("YELLOW SUBMARINE, BLACK WIZARDRY".as_bytes()),
+    )
+    .expect("Failed to decrypt token constructed with builder!");
+
+    let parsed: Value = ParseJson(&decrypted_token).expect("Failed to parse finalized token as json!");
+
+    assert!(parsed.get("iat").is_some());
+    assert!(parsed.get("iss").is_some());
+    assert!(parsed.get("aud").is_some());
+    assert!(parsed.get("jti").is_some());
+    assert!(parsed.get("sub").is_some());
+    assert!(parsed.get("claim").is_some());
+    assert!(parsed.get("nbf").is_some());
+  }
+
+  #[test]
+  #[cfg(all(feature = "v2", feature = "easy_tokens_time"))]
+  fn can_construct_a_token() {
+    let token = PasetoBuilder::new()
+      .set_encryption_key(&Vec::from("YELLOW SUBMARINE, BLACK WIZARDRY".as_bytes()))
+      .set_issued_at(None)
+      .set_expiration(&OffsetDateTime::now_utc())
+      .set_issuer("issuer")
+      .set_audience("audience")
+      .set_jti("jti")
+      .set_not_before(&OffsetDateTime::now_utc())
       .set_subject("test")
       .set_claim("claim", json!("data"))
       .set_footer("footer")
