@@ -10,14 +10,16 @@ authors = [
 edition = "2018"
 
 [features]
-default = ["v1", "v2", "easy_tokens"]
+default = ["v1", "v2", "easy_tokens_chrono"]
 v1 = ["openssl"]
 v2 = ["sodiumoxide"]
-easy_tokens = ["serde_json", "chrono"]
+easy_tokens_chrono = ["serde_json", "chrono"]
+easy_tokens_time = ["serde_json", "time"]
 
 [dependencies]
 base64 = "^0.13"
 chrono = { version = "^0.4", optional = true, features = ["serde"] }
+time = { version = "^0.2", optional = true, features = ["serde"] }
 failure = "^0.1"
 failure_derive = "^0.1"
 openssl = { version = "~0.10.24", optional = true }
