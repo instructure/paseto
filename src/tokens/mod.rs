@@ -79,7 +79,7 @@ pub fn validate_potential_json_blob(data: &str, backend: &TimeBackend) -> Result
           .map_err(|_| GenericError::InvalidToken {})
         )?;
 
-      if parsed_exp > Utc::now() {
+      if parsed_exp < Utc::now() {
         return Err(GenericError::InvalidToken {})?;
       }
 
@@ -113,7 +113,7 @@ pub fn validate_potential_json_blob(data: &str, backend: &TimeBackend) -> Result
           .map_err(|_| GenericError::InvalidToken {})
         )?;
 
-      if parsed_exp > OffsetDateTime::now_utc() {
+      if parsed_exp < OffsetDateTime::now_utc() {
         return Err(GenericError::InvalidToken {})?;
       }
 
