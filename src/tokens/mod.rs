@@ -64,33 +64,33 @@ pub fn validate_potential_json_blob(data: &str, backend: &TimeBackend) -> Result
     #[cfg(feature = "easy_tokens_chrono")]
     TimeBackend::Chrono => {
       let parsed_iat = value.get("iat").and_then(|issued_at| issued_at.as_str())
-        .ok_or(GenericError::InvalidToken {})
+        .ok_or(GenericError::UnparseableTokenDate {})
         .and_then(|iat| iat.parse::<DateTime<Utc>>()
-          .map_err(|_| GenericError::InvalidToken {})
+          .map_err(|_| GenericError::UnparseableTokenDate {})
         )?;
 
       if parsed_iat > Utc::now() {
-        return Err(GenericError::InvalidToken {})?;
+        return Err(GenericError::InvalidIssuedAtToken {})?;
       }
 
       let parsed_exp = value.get("exp").and_then(|expired| expired.as_str())
-        .ok_or(GenericError::InvalidToken {})
+        .ok_or(GenericError::UnparseableTokenDate {})
         .and_then(|exp| exp.parse::<DateTime<Utc>>()
-          .map_err(|_| GenericError::InvalidToken {})
+          .map_err(|_| GenericError::UnparseableTokenDate {})
         )?;
 
-      if parsed_exp > Utc::now() {
-        return Err(GenericError::InvalidToken {})?;
+      if parsed_exp < Utc::now() {
+        return Err(GenericError::ExpiredToken {})?;
       }
 
       let parsed_nbf = value.get("nbf").and_then(|not_before| not_before.as_str())
-        .ok_or(GenericError::InvalidToken {})
+        .ok_or(GenericError::UnparseableTokenDate {})
         .and_then(|nbf| nbf.parse::<DateTime<Utc>>()
-          .map_err(|_| GenericError::InvalidToken {})
+          .map_err(|_| GenericError::UnparseableTokenDate {})
         )?;
 
       if parsed_nbf > Utc::now() {
-        return Err(GenericError::InvalidToken {})?;
+        return Err(GenericError::InvalidNotBeforeToken {})?;
       }
 
       Ok(value)
@@ -98,33 +98,33 @@ pub fn validate_potential_json_blob(data: &str, backend: &TimeBackend) -> Result
     #[cfg(feature = "easy_tokens_time")]
     TimeBackend::Time => {
       let parsed_iat = value.get("iat").and_then(|issued_at| issued_at.as_str())
-        .ok_or(GenericError::InvalidToken {})
+        .ok_or(GenericError::UnparseableTokenDate {})
         .and_then(|iat| OffsetDateTime::parse(iat, time::Format::Rfc3339)
-          .map_err(|_| GenericError::InvalidToken {})
+          .map_err(|_| GenericError::UnparseableTokenDate {})
         )?;
 
       if parsed_iat > OffsetDateTime::now_utc() {
-        return Err(GenericError::InvalidToken {})?;
+        return Err(GenericError::InvalidIssuedAtToken {})?;
       }
 
       let parsed_exp = value.get("exp").and_then(|expired| expired.as_str())
-        .ok_or(GenericError::InvalidToken {})
+        .ok_or(GenericError::UnparseableTokenDate {})
         .and_then(|exp| OffsetDateTime::parse(exp, time::Format::Rfc3339)
-          .map_err(|_| GenericError::InvalidToken {})
+          .map_err(|_| GenericError::UnparseableTokenDate {})
         )?;
 
-      if parsed_exp > OffsetDateTime::now_utc() {
-        return Err(GenericError::InvalidToken {})?;
+      if parsed_exp < OffsetDateTime::now_utc() {
+        return Err(GenericError::ExpiredToken {})?;
       }
 
       let parsed_nbf = value.get("nbf").and_then(|not_before| not_before.as_str())
-        .ok_or(GenericError::InvalidToken {})
+        .ok_or(GenericError::UnparseableTokenDate {})
         .and_then(|nbf| OffsetDateTime::parse(nbf, time::Format::Rfc3339)
-          .map_err(|_| GenericError::InvalidToken {})
+          .map_err(|_| GenericError::UnparseableTokenDate {})
         )?;
 
       if parsed_nbf > OffsetDateTime::now_utc() {
-        return Err(GenericError::InvalidToken {})?;
+        return Err(GenericError::InvalidNotBeforeToken {})?;
       }
 
       Ok(value)
@@ -224,6 +224,7 @@ mod unit_tests {
   #[cfg(feature = "v2")]
   use ring::rand::SystemRandom;
   use serde_json::json;
+  use chrono::Duration;
 
   #[test]
   #[cfg(feature = "easy_tokens_chrono")]
@@ -249,9 +250,69 @@ mod unit_tests {
       &token,
       Some("footer"),
       &"YELLOW SUBMARINE, BLACK WIZARDRY".as_bytes(),
-      TimeBackend::Chrono
+      &TimeBackend::Chrono
     )
     .expect("Failed to validate token!");
+  }
+
+  #[test]
+  #[cfg(feature = "easy_tokens_chrono")]
+  fn valid_enc_token_expired_test() {
+    let current_date_time = Utc::now();
+    let dt = Utc.ymd(current_date_time.year() - 1, 7, 8).and_hms(9, 10, 11);
+
+    let token = PasetoBuilder::new()
+      .set_encryption_key(&Vec::from("YELLOW SUBMARINE, BLACK WIZARDRY".as_bytes()))
+      .set_issued_at(None)
+      .set_expiration(&dt)
+      .set_issuer("issuer")
+      .set_audience("audience")
+      .set_jti("jti")
+      .set_not_before(&Utc::now())
+      .set_subject("test")
+      .set_claim("claim", json!("data"))
+      .set_footer("footer")
+      .build()
+      .expect("Failed to construct paseto token w/ builder!");
+
+    let _error: failure::Error = (GenericError::ExpiredToken {}).into();
+
+    assert!(matches!(validate_local_token(
+      &token,
+      Some("footer"),
+      &"YELLOW SUBMARINE, BLACK WIZARDRY".as_bytes(),
+      &TimeBackend::Chrono
+    ), Err(_error)));
+  }
+
+  #[test]
+  #[cfg(feature = "easy_tokens_chrono")]
+  fn valid_enc_token_not_before_test() {
+    let current_date_time = Utc::now();
+    let dt = Utc.ymd(current_date_time.year() - 1, 7, 8).and_hms(9, 10, 11);
+
+    let token = PasetoBuilder::new()
+      .set_encryption_key(&Vec::from("YELLOW SUBMARINE, BLACK WIZARDRY".as_bytes()))
+      .set_issued_at(None)
+      .set_expiration(&dt)
+      .set_issuer("issuer")
+      .set_audience("audience")
+      .set_jti("jti")
+      .set_not_before(&(Utc::now() + Duration::days(1)))
+      .set_subject("test")
+      .set_claim("claim", json!("data"))
+      .set_footer("footer")
+      .build()
+      .expect("Failed to construct paseto token w/ builder!");
+
+    let _error: failure::Error = (GenericError::InvalidNotBeforeToken {}).into();
+
+    assert!(matches!(validate_local_token(
+      &token,
+      Some("footer"),
+      &"YELLOW SUBMARINE, BLACK WIZARDRY".as_bytes(),
+      &TimeBackend::Chrono
+    ), Err(_error)));
   }
 
   #[test]
@@ -278,7 +339,7 @@ mod unit_tests {
       &token,
       Some("footer"),
       &"YELLOW SUBMARINE, BLACK WIZARDRY".as_bytes(),
-      TimeBackend::Chrono
+      &TimeBackend::Chrono
     )
     .is_err());
   }
@@ -311,7 +372,7 @@ mod unit_tests {
       &token,
       Some("footer"),
       &PasetoPublicKey::ED25519KeyPair(&as_key),
-      TimeBackend::Chrono
+      &TimeBackend::Chrono
     )
     .expect("Failed to validate token!");
   }
@@ -344,7 +405,7 @@ mod unit_tests {
       &token,
       Some("footer"),
       &PasetoPublicKey::ED25519PublicKey(as_key.public_key().as_ref()),
-      TimeBackend::Chrono
+      &TimeBackend::Chrono
     )
     .expect("Failed to validate token!");
   }
@@ -373,6 +434,6 @@ mod unit_tests {
       .build()
       .expect("Failed to construct paseto token w/ builder!");
 
-    assert!(validate_public_token(&token, Some("footer"), &PasetoPublicKey::ED25519KeyPair(&as_key), TimeBackend::Chrono).is_err());
+    assert!(validate_public_token(&token, Some("footer"), &PasetoPublicKey::ED25519KeyPair(&as_key), &TimeBackend::Chrono).is_err());
   }
 }
