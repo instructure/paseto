@@ -2,7 +2,6 @@
 use {
   ring::rand::SystemRandom,
   ring::signature::Ed25519KeyPair,
-  serde_json::json,
 };
 #[cfg(all(feature = "v2", any(feature = "easy_tokens_chrono", feature = "easy_tokens_time")))]
 use serde_json::json;

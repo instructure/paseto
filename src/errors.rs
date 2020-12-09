@@ -26,8 +26,16 @@ pub enum RsaKeyErrors {
 pub enum GenericError {
   #[fail(display = "No key of the correct type was provided")]
   NoKeyProvided {},
-  #[fail(display = "This token is invalid, or expired.")]
+  #[fail(display = "This token is invalid.")]
   InvalidToken {},
+  #[fail(display = "This token contains a claim with an unparseable date.")]
+  UnparseableTokenDate {},
+  #[fail(display = "This token contains an issued at date that is not in the past (IAT claim).")]
+  InvalidIssuedAtToken {},
+  #[fail(display = "This token is not valid yet (NBF claim).")]
+  InvalidNotBeforeToken {},
+  #[fail(display = "This token is expired (EXP claim).")]
+  ExpiredToken {},
   #[fail(display = "This token has an invalid footer.")]
   InvalidFooter {},
   #[fail(display = "Failed to generate enough random bytes.")]
