@@ -28,9 +28,9 @@ pub enum GenericError {
   NoKeyProvided {},
   #[fail(display = "This token is invalid.")]
   InvalidToken {},
-  #[fail(display = "This token contains a claim with an unparseable date.")]
-  UnparseableTokenDate {},
-  #[fail(display = "This token contains an issued at date that is not in the past (IAT claim).")]
+  #[fail(display = "The claim: {}, has an invalid date", claim_name)]
+  UnparseableTokenDate { claim_name: &'static str },
+  #[fail(display = "This token has not yet been issued, the issued at claim (IAT) is in the future.")]
   InvalidIssuedAtToken {},
   #[fail(display = "This token is not valid yet (NBF claim).")]
   InvalidNotBeforeToken {},

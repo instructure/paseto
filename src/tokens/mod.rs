@@ -64,9 +64,9 @@ pub fn validate_potential_json_blob(data: &str, backend: &TimeBackend) -> Result
     #[cfg(feature = "easy_tokens_chrono")]
     TimeBackend::Chrono => {
       let parsed_iat = value.get("iat").and_then(|issued_at| issued_at.as_str())
-        .ok_or(GenericError::UnparseableTokenDate {})
+        .ok_or(GenericError::UnparseableTokenDate { claim_name: "iat" })
         .and_then(|iat| iat.parse::<DateTime<Utc>>()
-          .map_err(|_| GenericError::UnparseableTokenDate {})
+          .map_err(|_| GenericError::UnparseableTokenDate { claim_name: "iat" })
         )?;
 
       if parsed_iat > Utc::now() {
@@ -74,9 +74,9 @@ pub fn validate_potential_json_blob(data: &str, backend: &TimeBackend) -> Result
       }
 
       let parsed_exp = value.get("exp").and_then(|expired| expired.as_str())
-        .ok_or(GenericError::UnparseableTokenDate {})
+        .ok_or(GenericError::UnparseableTokenDate { claim_name: "exp" })
         .and_then(|exp| exp.parse::<DateTime<Utc>>()
-          .map_err(|_| GenericError::UnparseableTokenDate {})
+          .map_err(|_| GenericError::UnparseableTokenDate { claim_name: "exp" })
         )?;
 
       if parsed_exp < Utc::now() {
@@ -84,9 +84,9 @@ pub fn validate_potential_json_blob(data: &str, backend: &TimeBackend) -> Result
       }
 
       let parsed_nbf = value.get("nbf").and_then(|not_before| not_before.as_str())
-        .ok_or(GenericError::UnparseableTokenDate {})
+        .ok_or(GenericError::UnparseableTokenDate { claim_name: "nbf" })
         .and_then(|nbf| nbf.parse::<DateTime<Utc>>()
-          .map_err(|_| GenericError::UnparseableTokenDate {})
+          .map_err(|_| GenericError::UnparseableTokenDate { claim_name: "nbf" })
         )?;
 
       if parsed_nbf > Utc::now() {
