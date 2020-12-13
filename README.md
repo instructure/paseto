@@ -8,7 +8,7 @@ _NOTE: The license of the original paseto implementation is ISC which is functio
 ## What is Paseto? ##
 
 Paseto (Platform-Agnostic SEcurity TOkens) is a specification and reference implementation for secure stateless tokens. You
-can find a lot of info about the motivation + benifits of using paseto inside the original paseto repo: [HERE][reference_impl].
+can find a lot of info about the motivation + benefits of using paseto inside the original paseto repo: [HERE][reference_impl].
 
 ## Usage ##
 
@@ -24,7 +24,7 @@ paseto = "^1.0.7"
 The `examples/` directory covers the following use cases:
   1. Using the protocol directly to encode potentially non-json data.
   2. Using the public builder interface to build a JWT esque equivelant json payload with shared key encryption.
-  3. Using the public buidler interface to build a JWT esque equivelant json payload with public key signing.
+  3. Using the public builder interface to build a JWT esque equivelant json payload with public key signing.
 
 [reference_impl]: https://github.com/paragonie/paseto
 [reference_license]: https://github.com/paragonie/paseto/blob/master/LICENSE
