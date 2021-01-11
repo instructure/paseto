@@ -1,0 +1,39 @@
+---
+trigger:
+  branches:
+    include:
+    - 'trunk'
+pr:
+  branches:
+    include:
+    - '*'
+
+pool:
+  vmImage: 'ubuntu-18.04'
+
+variables: []
+
+steps:
+  - script: |
+      cargo fmt --all -- --check
+    displayName: Validate formatting
+  - script: |
+      cargo test --no-default-features --features "v1"
+      cargo test --no-default-features --features "v2"
+      cargo test --no-default-features --features "v1,v2"
+    displayName: Test with no easy tokens
+  - script: |
+      cargo test --no-default-features --features "v1,v2,easy_tokens_chrono"
+      cargo test --no-default-features --features "v1,easy_tokens_chrono"
+      cargo test --no-default-features --features "v2,easy_tokens_chrono"
+    displayName: Test with just easy tokens chrono
+  - script: |
+      cargo test --no-default-features --features "v1,v2,easy_tokens_time"
+      cargo test --no-default-features --features "v1,easy_tokens_time"
+      cargo test --no-default-features --features "v2,easy_tokens_time"
+    displayName: Test with just easy tokens time
+  - script: |
+      cargo test --no-default-features --features "v1,v2,easy_tokens_chrono,easy_tokens_time"
+      cargo test --no-default-features --features "v1,easy_tokens_chrono,easy_tokens_time"
+      cargo test --no-default-features --features "v1,easy_tokens_chrono,easy_tokens_time"
+    displayName: Test with all features

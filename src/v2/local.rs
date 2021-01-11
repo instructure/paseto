@@ -27,7 +27,10 @@ pub fn local_paseto(msg: &str, footer: Option<&str>, key: &[u8]) -> Result<Strin
   }
 
   if key.len() != 32 {
-    return Err(SodiumErrors::InvalidKeySize { size_needed: 32, size_provided: key.len() })?;
+    return Err(SodiumErrors::InvalidKeySize {
+      size_needed: 32,
+      size_provided: key.len(),
+    })?;
   }
 
   underlying_local_paseto(msg, footer, &buff, key)
