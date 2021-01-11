@@ -4,6 +4,9 @@
 * High-level functions like `validate_local_token` and `validate_public_token` now take the `key` by reference.
 * The reference to `key` passed as argument to `v1::public::public_paseto` is not longer taken as mutable.
 * `tokens::PasetoBuilder` methods have been changed to only take references
+* Support for the time crate has been added with a feature, this should not be used in conjunction with chrono.
+* Create better error messages to hopefully be less user hostile.
+* update dependencies.
 
 ## 1.0.7
 

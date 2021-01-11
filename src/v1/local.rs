@@ -1,6 +1,6 @@
 //! An implementation of paseto v1 "local" tokens, or tokens encrypted using a shared secret.
 
-use crate::errors::GenericError;
+use crate::errors::{GenericError, SodiumErrors};
 use crate::pae::pae;
 use crate::v1::get_nonce::calculate_hashed_nonce;
 use crate::v1::key_wrapper::CustomKeyWrapper;
@@ -17,6 +17,9 @@ const HEADER: &str = "v1.local.";
 
 /// Encrypt a "v1.local" paseto token.
 ///
+/// Keys must be exactly 32 bytes long, this is a requirement of the underlying
+/// algorithim.
+///
 /// Returns a result of a string if encryption was successful.
 pub fn local_paseto(msg: &str, footer: Option<&str>, key: &[u8]) -> Result<String, Error> {
   let rng = SystemRandom::new();
@@ -24,6 +27,9 @@ pub fn local_paseto(msg: &str, footer: Option<&str>, key: &[u8]) -> Result<Strin
   let res = rng.fill(&mut buff);
   if res.is_err() {
     return Err(GenericError::RandomError {})?;
+  }
+  if key.len() != 32 {
+    return Err(SodiumErrors::InvalidKeySize { size_needed: 32, size_provided: key.len() })?;
   }
 
   underlying_local_paseto(msg, footer, &buff, key)

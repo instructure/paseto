@@ -118,6 +118,9 @@ impl<'a> PasetoBuilder<'a> {
 impl<'a> PasetoBuilder<'a> {
   /// Sets the encryption key to use for the paseto token.
   ///
+  /// Keys should be exactly 32 bytes long, this is a requirement of the
+  /// underlying encryption algorithims.
+  ///
   /// NOTE: If you set this we _*will*_ use a local token.
   pub fn set_encryption_key(&'a mut self, encryption_key: &'a [u8]) -> &'a mut Self {
     self.encryption_key = Some(encryption_key);
