@@ -1,7 +1,7 @@
 [package]
 name = "paseto"
 description = "An alternative token format to JWT"
-version = "1.0.7"
+version = "2.0.0+1.0.3"
 repository = "https://github.com/instructure/paseto"
 license = "MIT"
 authors = [

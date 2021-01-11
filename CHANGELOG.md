@@ -1,4 +1,4 @@
-## Unreleased
+## 2.0.0+1.0.3
 
 * Change `pae::pae` to borrow a slice of slices (`&[&[u8]]`) instead of taking ownership of a `Vec<Vec<u8>>`.
 * High-level functions like `validate_local_token` and `validate_public_token` now take the `key` by reference.
@@ -7,6 +7,7 @@
 * Support for the time crate has been added with a feature, this should not be used in conjunction with chrono.
 * Create better error messages to hopefully be less user hostile.
 * update dependencies.
+* versions now have a "build number" to indicate what upstream version they track.
 
 ## 1.0.7
 
