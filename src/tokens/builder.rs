@@ -11,14 +11,14 @@ use crate::v2::{local_paseto as V2Local, public_paseto as V2Public};
 
 #[cfg(feature = "easy_tokens_chrono")]
 use chrono::prelude::*;
-#[cfg(feature = "easy_tokens_time")]
-use time::OffsetDateTime;
 use failure::Error;
 #[cfg(feature = "v2")]
 use ring::signature::Ed25519KeyPair;
 #[cfg(feature = "v1")]
 use ring::signature::RsaKeyPair;
 use serde_json::{json, to_string, Value};
+#[cfg(feature = "easy_tokens_time")]
+use time::OffsetDateTime;
 
 use std::collections::HashMap;
 
@@ -240,15 +240,11 @@ impl<'a> PasetoBuilder<'a> {
 #[cfg(test)]
 mod unit_test {
   #[cfg(feature = "v2")]
-  use {
-    super::*,
-    crate::v2::local::decrypt_paseto as V2Decrypt,
-    serde_json::from_str as ParseJson
-  };
+  use {super::*, crate::v2::local::decrypt_paseto as V2Decrypt, serde_json::from_str as ParseJson};
 
   #[test]
-  #[cfg(all(feature = "v2", feature = "easy_tokens_chrono"))]
-  fn can_construct_a_token() {
+  #[cfg(all(feature = "v2", feature = "easy_tokens_chrono", not(feature = "easy_tokens_time")))]
+  fn can_construct_a_token_chrono() {
     let token = PasetoBuilder::new()
       .set_encryption_key(&Vec::from("YELLOW SUBMARINE, BLACK WIZARDRY".as_bytes()))
       .set_issued_at(None)
@@ -282,8 +278,8 @@ mod unit_test {
   }
 
   #[test]
-  #[cfg(all(feature = "v2", feature = "easy_tokens_time"))]
-  fn can_construct_a_token() {
+  #[cfg(all(feature = "v2", feature = "easy_tokens_time", not(feature = "easy_tokens_chrono")))]
+  fn can_construct_a_token_time() {
     let token = PasetoBuilder::new()
       .set_encryption_key(&Vec::from("YELLOW SUBMARINE, BLACK WIZARDRY".as_bytes()))
       .set_issued_at(None)

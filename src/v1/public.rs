@@ -21,11 +21,7 @@ pub fn public_paseto(msg: &str, footer: Option<&str>, key_pair: &RsaKeyPair) -> 
   }
   let footer_frd = footer.unwrap_or("");
 
-  let pre_auth = pae(&[
-    HEADER.as_bytes(),
-    msg.as_bytes(),
-    footer_frd.as_bytes(),
-  ]);
+  let pre_auth = pae(&[HEADER.as_bytes(), msg.as_bytes(), footer_frd.as_bytes()]);
   let random = SystemRandom::new();
 
   let mut signed_msg = [0; 256];
@@ -83,11 +79,7 @@ pub fn verify_paseto(token: &str, footer: Option<&str>, public_key: &[u8]) -> Re
   let decoded_len = decoded.len();
   let (message, sig) = decoded.split_at(decoded_len - 256);
 
-  let pre_auth = pae(&[
-    HEADER.as_bytes(),
-    message,
-    footer_as_str.as_bytes(),
-  ]);
+  let pre_auth = pae(&[HEADER.as_bytes(), message, footer_as_str.as_bytes()]);
 
   let pk_unparsed = UnparsedPublicKey::new(&RSA_PSS_2048_8192_SHA384, public_key);
   let verify_result = pk_unparsed.verify(&pre_auth, sig);

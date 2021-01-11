@@ -10,12 +10,12 @@ use crate::v2::{decrypt_paseto as V2Decrypt, verify_paseto as V2Verify};
 
 #[cfg(feature = "easy_tokens_chrono")]
 use chrono::prelude::*;
-#[cfg(feature = "easy_tokens_time")]
-use time::OffsetDateTime;
 use failure::Error;
 #[cfg(feature = "v2")]
 use ring::signature::{Ed25519KeyPair, KeyPair};
 use serde_json::{from_str as ParseJson, Value as JsonValue};
+#[cfg(feature = "easy_tokens_time")]
+use time::OffsetDateTime;
 
 pub mod builder;
 pub use self::builder::*;
@@ -42,7 +42,7 @@ pub enum TimeBackend {
   #[cfg(feature = "easy_tokens_chrono")]
   Chrono,
   #[cfg(feature = "easy_tokens_time")]
-  Time
+  Time,
 }
 
 /// Validates a potential json data blob, returning a JsonValue.
@@ -63,31 +63,43 @@ pub fn validate_potential_json_blob(data: &str, backend: &TimeBackend) -> Result
   match backend {
     #[cfg(feature = "easy_tokens_chrono")]
     TimeBackend::Chrono => {
-      let parsed_iat = value.get("iat").and_then(|issued_at| issued_at.as_str())
+      let parsed_iat = value
+        .get("iat")
+        .and_then(|issued_at| issued_at.as_str())
         .ok_or(GenericError::UnparseableTokenDate { claim_name: "iat" })
-        .and_then(|iat| iat.parse::<DateTime<Utc>>()
-          .map_err(|_| GenericError::UnparseableTokenDate { claim_name: "iat" })
-        )?;
+        .and_then(|iat| {
+          iat
+            .parse::<DateTime<Utc>>()
+            .map_err(|_| GenericError::UnparseableTokenDate { claim_name: "iat" })
+        })?;
 
       if parsed_iat > Utc::now() {
         return Err(GenericError::InvalidIssuedAtToken {})?;
       }
 
-      let parsed_exp = value.get("exp").and_then(|expired| expired.as_str())
+      let parsed_exp = value
+        .get("exp")
+        .and_then(|expired| expired.as_str())
         .ok_or(GenericError::UnparseableTokenDate { claim_name: "exp" })
-        .and_then(|exp| exp.parse::<DateTime<Utc>>()
-          .map_err(|_| GenericError::UnparseableTokenDate { claim_name: "exp" })
-        )?;
+        .and_then(|exp| {
+          exp
+            .parse::<DateTime<Utc>>()
+            .map_err(|_| GenericError::UnparseableTokenDate { claim_name: "exp" })
+        })?;
 
       if parsed_exp < Utc::now() {
         return Err(GenericError::ExpiredToken {})?;
       }
 
-      let parsed_nbf = value.get("nbf").and_then(|not_before| not_before.as_str())
+      let parsed_nbf = value
+        .get("nbf")
+        .and_then(|not_before| not_before.as_str())
         .ok_or(GenericError::UnparseableTokenDate { claim_name: "nbf" })
-        .and_then(|nbf| nbf.parse::<DateTime<Utc>>()
-          .map_err(|_| GenericError::UnparseableTokenDate { claim_name: "nbf" })
-        )?;
+        .and_then(|nbf| {
+          nbf
+            .parse::<DateTime<Utc>>()
+            .map_err(|_| GenericError::UnparseableTokenDate { claim_name: "nbf" })
+        })?;
 
       if parsed_nbf > Utc::now() {
         return Err(GenericError::InvalidNotBeforeToken {})?;
@@ -97,31 +109,40 @@ pub fn validate_potential_json_blob(data: &str, backend: &TimeBackend) -> Result
     }
     #[cfg(feature = "easy_tokens_time")]
     TimeBackend::Time => {
-      let parsed_iat = value.get("iat").and_then(|issued_at| issued_at.as_str())
+      let parsed_iat = value
+        .get("iat")
+        .and_then(|issued_at| issued_at.as_str())
         .ok_or(GenericError::UnparseableTokenDate { claim_name: "iat" })
-        .and_then(|iat| OffsetDateTime::parse(iat, time::Format::Rfc3339)
-          .map_err(|_| GenericError::UnparseableTokenDate { claim_name: "iat" })
-        )?;
+        .and_then(|iat| {
+          OffsetDateTime::parse(iat, time::Format::Rfc3339)
+            .map_err(|_| GenericError::UnparseableTokenDate { claim_name: "iat" })
+        })?;
 
       if parsed_iat > OffsetDateTime::now_utc() {
         return Err(GenericError::InvalidIssuedAtToken {})?;
       }
 
-      let parsed_exp = value.get("exp").and_then(|expired| expired.as_str())
+      let parsed_exp = value
+        .get("exp")
+        .and_then(|expired| expired.as_str())
         .ok_or(GenericError::UnparseableTokenDate { claim_name: "exp" })
-        .and_then(|exp| OffsetDateTime::parse(exp, time::Format::Rfc3339)
-          .map_err(|_| GenericError::UnparseableTokenDate { claim_name: "exp" })
-        )?;
+        .and_then(|exp| {
+          OffsetDateTime::parse(exp, time::Format::Rfc3339)
+            .map_err(|_| GenericError::UnparseableTokenDate { claim_name: "exp" })
+        })?;
 
       if parsed_exp < OffsetDateTime::now_utc() {
         return Err(GenericError::ExpiredToken {})?;
       }
 
-      let parsed_nbf = value.get("nbf").and_then(|not_before| not_before.as_str())
+      let parsed_nbf = value
+        .get("nbf")
+        .and_then(|not_before| not_before.as_str())
         .ok_or(GenericError::UnparseableTokenDate { claim_name: "nbf" })
-        .and_then(|nbf| OffsetDateTime::parse(nbf, time::Format::Rfc3339)
-          .map_err(|_| GenericError::UnparseableTokenDate { claim_name: "nbf" })
-        )?;
+        .and_then(|nbf| {
+          OffsetDateTime::parse(nbf, time::Format::Rfc3339)
+            .map_err(|_| GenericError::UnparseableTokenDate { claim_name: "nbf" })
+        })?;
 
       if parsed_nbf > OffsetDateTime::now_utc() {
         return Err(GenericError::InvalidNotBeforeToken {})?;
@@ -147,7 +168,12 @@ pub fn validate_potential_json_blob(data: &str, backend: &TimeBackend) -> Result
 ///
 /// Because we validate these fields the resulting type must be a json object. If it's not
 /// please use the protocol impls directly.
-pub fn validate_local_token(token: &str, footer: Option<&str>, key: &[u8], backend: &TimeBackend) -> Result<JsonValue, Error> {
+pub fn validate_local_token(
+  token: &str,
+  footer: Option<&str>,
+  key: &[u8],
+  backend: &TimeBackend,
+) -> Result<JsonValue, Error> {
   #[cfg(feature = "v2")]
   {
     if token.starts_with("v2.local.") {
@@ -182,7 +208,12 @@ pub fn validate_local_token(token: &str, footer: Option<&str>, key: &[u8], backe
 ///
 /// Because we validate these fields the resulting type must be a json object. If it's not
 /// please use the protocol impls directly.
-pub fn validate_public_token(token: &str, footer: Option<&str>, key: &PasetoPublicKey, backend: &TimeBackend) -> Result<JsonValue, Error> {
+pub fn validate_public_token(
+  token: &str,
+  footer: Option<&str>,
+  key: &PasetoPublicKey,
+  backend: &TimeBackend,
+) -> Result<JsonValue, Error> {
   #[cfg(feature = "v2")]
   {
     if token.starts_with("v2.public.") {
@@ -221,13 +252,14 @@ pub fn validate_public_token(token: &str, footer: Option<&str>, key: &PasetoPubl
 #[cfg(test)]
 mod unit_tests {
   use super::*;
+  #[cfg(feature = "easy_tokens_chrono")]
+  use chrono::Duration;
   #[cfg(feature = "v2")]
   use ring::rand::SystemRandom;
   use serde_json::json;
-  use chrono::Duration;
 
   #[test]
-  #[cfg(feature = "easy_tokens_chrono")]
+  #[cfg(all(feature = "easy_tokens_chrono", not(feature = "easy_tokens_time")))]
   fn valid_enc_token_passes_test() {
     let current_date_time = Utc::now();
     let dt = Utc.ymd(current_date_time.year() + 1, 7, 8).and_hms(9, 10, 11);
@@ -250,13 +282,13 @@ mod unit_tests {
       &token,
       Some("footer"),
       &"YELLOW SUBMARINE, BLACK WIZARDRY".as_bytes(),
-      &TimeBackend::Chrono
+      &TimeBackend::Chrono,
     )
     .expect("Failed to validate token!");
   }
 
   #[test]
-  #[cfg(feature = "easy_tokens_chrono")]
+  #[cfg(all(feature = "easy_tokens_chrono", not(feature = "easy_tokens_time")))]
   fn valid_enc_token_expired_test() {
     let current_date_time = Utc::now();
     let dt = Utc.ymd(current_date_time.year() - 1, 7, 8).and_hms(9, 10, 11);
@@ -277,16 +309,19 @@ mod unit_tests {
 
     let _error: failure::Error = (GenericError::ExpiredToken {}).into();
 
-    assert!(matches!(validate_local_token(
-      &token,
-      Some("footer"),
-      &"YELLOW SUBMARINE, BLACK WIZARDRY".as_bytes(),
-      &TimeBackend::Chrono
-    ), Err(_error)));
+    assert!(matches!(
+      validate_local_token(
+        &token,
+        Some("footer"),
+        &"YELLOW SUBMARINE, BLACK WIZARDRY".as_bytes(),
+        &TimeBackend::Chrono
+      ),
+      Err(_error)
+    ));
   }
 
   #[test]
-  #[cfg(feature = "easy_tokens_chrono")]
+  #[cfg(all(feature = "easy_tokens_chrono", not(feature = "easy_tokens_time")))]
   fn valid_enc_token_not_before_test() {
     let current_date_time = Utc::now();
     let dt = Utc.ymd(current_date_time.year() - 1, 7, 8).and_hms(9, 10, 11);
@@ -307,16 +342,19 @@ mod unit_tests {
 
     let _error: failure::Error = (GenericError::InvalidNotBeforeToken {}).into();
 
-    assert!(matches!(validate_local_token(
-      &token,
-      Some("footer"),
-      &"YELLOW SUBMARINE, BLACK WIZARDRY".as_bytes(),
-      &TimeBackend::Chrono
-    ), Err(_error)));
+    assert!(matches!(
+      validate_local_token(
+        &token,
+        Some("footer"),
+        &"YELLOW SUBMARINE, BLACK WIZARDRY".as_bytes(),
+        &TimeBackend::Chrono
+      ),
+      Err(_error)
+    ));
   }
 
   #[test]
-  #[cfg(feature = "easy_tokens_chrono")]
+  #[cfg(all(feature = "easy_tokens_chrono", not(feature = "easy_tokens_time")))]
   fn invalid_enc_token_doesnt_validate() {
     let current_date_time = Utc::now();
     let dt = Utc.ymd(current_date_time.year() - 1, 7, 8).and_hms(9, 10, 11);
@@ -345,7 +383,7 @@ mod unit_tests {
   }
 
   #[test]
-  #[cfg(all(feature = "v2", feature = "easy_tokens_chrono"))]
+  #[cfg(all(feature = "v2", feature = "easy_tokens_chrono", not(feature = "easy_tokens_time")))]
   fn valid_pub_token_passes_test() {
     let current_date_time = Utc::now();
     let dt = Utc.ymd(current_date_time.year() + 1, 7, 8).and_hms(9, 10, 11);
@@ -372,13 +410,13 @@ mod unit_tests {
       &token,
       Some("footer"),
       &PasetoPublicKey::ED25519KeyPair(&as_key),
-      &TimeBackend::Chrono
+      &TimeBackend::Chrono,
     )
     .expect("Failed to validate token!");
   }
 
   #[test]
-  #[cfg(all(feature = "v2", feature = "easy_tokens_chrono"))]
+  #[cfg(all(feature = "v2", feature = "easy_tokens_chrono", not(feature = "easy_tokens_time")))]
   fn validate_pub_key_only_v2() {
     let current_date_time = Utc::now();
     let dt = Utc.ymd(current_date_time.year() + 1, 7, 8).and_hms(9, 10, 11);
@@ -405,13 +443,13 @@ mod unit_tests {
       &token,
       Some("footer"),
       &PasetoPublicKey::ED25519PublicKey(as_key.public_key().as_ref()),
-      &TimeBackend::Chrono
+      &TimeBackend::Chrono,
     )
     .expect("Failed to validate token!");
   }
 
   #[test]
-  #[cfg(all(feature = "v2", feature = "easy_tokens_chrono"))]
+  #[cfg(all(feature = "v2", feature = "easy_tokens_chrono", not(feature = "easy_tokens_time")))]
   fn invalid_pub_token_doesnt_validate() {
     let current_date_time = Utc::now();
     let dt = Utc.ymd(current_date_time.year() - 1, 7, 8).and_hms(9, 10, 11);
@@ -434,6 +472,12 @@ mod unit_tests {
       .build()
       .expect("Failed to construct paseto token w/ builder!");
 
-    assert!(validate_public_token(&token, Some("footer"), &PasetoPublicKey::ED25519KeyPair(&as_key), &TimeBackend::Chrono).is_err());
+    assert!(validate_public_token(
+      &token,
+      Some("footer"),
+      &PasetoPublicKey::ED25519KeyPair(&as_key),
+      &TimeBackend::Chrono
+    )
+    .is_err());
   }
 }

@@ -46,11 +46,7 @@ fn underlying_local_paseto(msg: &str, footer: Option<&str>, nonce_key: &[u8; 24]
           }
           let key_obj = key_obj.unwrap();
 
-          let pre_auth = pae(&[
-            HEADER.as_bytes(),
-            &nonce_bytes,
-            footer_frd.as_bytes(),
-          ]);
+          let pre_auth = pae(&[HEADER.as_bytes(), &nonce_bytes, footer_frd.as_bytes()]);
 
           let crypted = Encrypt(msg.as_bytes(), Some(pre_auth.as_ref()), &nonce, &key_obj);
 
@@ -116,11 +112,7 @@ pub fn decrypt_paseto(token: &str, footer: Option<&str>, key: &[u8]) -> Result<S
   let mut decoded = decode_config(token_parts[2].as_bytes(), URL_SAFE_NO_PAD)?;
   let (nonce, ciphertext) = decoded.split_at_mut(24);
 
-  let pre_auth = pae(&[
-    HEADER.as_bytes(),
-    nonce,
-    footer_str.as_bytes(),
-  ]);
+  let pre_auth = pae(&[HEADER.as_bytes(), nonce, footer_str.as_bytes()]);
 
   let nonce_obj = Nonce::from_slice(nonce);
   let key_obj = Key::from_slice(key);

@@ -63,12 +63,7 @@ fn underlying_local_paseto(msg: &str, footer: Option<&str>, random_nonce: &[u8],
   let cipher = symm::Cipher::aes_256_ctr();
   let crypted = symm::encrypt(cipher, &ek, Some(&ctr_nonce), msg.as_bytes())?;
 
-  let pre_auth = pae(&[
-    HEADER.as_bytes(),
-    &true_nonce,
-    &crypted,
-    footer_frd.as_bytes(),
-  ]);
+  let pre_auth = pae(&[HEADER.as_bytes(), &true_nonce, &crypted, footer_frd.as_bytes()]);
 
   let mac_key = Key::new(HMAC_SHA384, &ak);
   let signed = sign(&mac_key, &pre_auth);
@@ -150,12 +145,7 @@ pub fn decrypt_paseto(token: &str, footer: Option<&str>, key: &[u8]) -> Result<S
     return Err(GenericError::BadHkdf {})?;
   }
 
-  let pre_auth = pae(&[
-    HEADER.as_bytes(),
-    &nonce,
-    ciphertext,
-    footer_str.as_bytes(),
-  ]);
+  let pre_auth = pae(&[HEADER.as_bytes(), &nonce, ciphertext, footer_str.as_bytes()]);
 
   let mac_key = Key::new(HMAC_SHA384, &ak);
   let signed = sign(&mac_key, &pre_auth);
