@@ -63,89 +63,101 @@ pub fn validate_potential_json_blob(data: &str, backend: &TimeBackend) -> Result
   match backend {
     #[cfg(feature = "easy_tokens_chrono")]
     TimeBackend::Chrono => {
-      let parsed_iat = value
-        .get("iat")
-        .and_then(|issued_at| issued_at.as_str())
-        .ok_or(GenericError::UnparseableTokenDate { claim_name: "iat" })
-        .and_then(|iat| {
-          iat
-            .parse::<DateTime<Utc>>()
-            .map_err(|_| GenericError::UnparseableTokenDate { claim_name: "iat" })
-        })?;
+      let iat_value = value.get("iat");
+      if iat_value.is_some() {
+        let parsed_iat = iat_value
+          .and_then(|issued_at| issued_at.as_str())
+          .ok_or(GenericError::UnparseableTokenDate { claim_name: "iat" })
+          .and_then(|iat| {
+            iat
+              .parse::<DateTime<Utc>>()
+              .map_err(|_| GenericError::UnparseableTokenDate { claim_name: "iat" })
+          })?;
 
-      if parsed_iat > Utc::now() {
-        return Err(GenericError::InvalidIssuedAtToken {})?;
+        if parsed_iat > Utc::now() {
+          return Err(GenericError::InvalidIssuedAtToken {})?;
+        }
       }
 
-      let parsed_exp = value
-        .get("exp")
-        .and_then(|expired| expired.as_str())
-        .ok_or(GenericError::UnparseableTokenDate { claim_name: "exp" })
-        .and_then(|exp| {
-          exp
-            .parse::<DateTime<Utc>>()
-            .map_err(|_| GenericError::UnparseableTokenDate { claim_name: "exp" })
-        })?;
+      let exp_value = value.get("exp");
+      if exp_value.is_some() {
+        let parsed_exp = exp_value
+          .and_then(|expired| expired.as_str())
+          .ok_or(GenericError::UnparseableTokenDate { claim_name: "exp" })
+          .and_then(|exp| {
+            exp
+              .parse::<DateTime<Utc>>()
+              .map_err(|_| GenericError::UnparseableTokenDate { claim_name: "exp" })
+          })?;
 
-      if parsed_exp < Utc::now() {
-        return Err(GenericError::ExpiredToken {})?;
+        if parsed_exp < Utc::now() {
+          return Err(GenericError::ExpiredToken {})?;
+        }
       }
 
-      let parsed_nbf = value
-        .get("nbf")
-        .and_then(|not_before| not_before.as_str())
-        .ok_or(GenericError::UnparseableTokenDate { claim_name: "nbf" })
-        .and_then(|nbf| {
-          nbf
-            .parse::<DateTime<Utc>>()
-            .map_err(|_| GenericError::UnparseableTokenDate { claim_name: "nbf" })
-        })?;
+      let nbf_value = value.get("nbf");
+      if nbf_value.is_some() {
+        let parsed_nbf = nbf_value
+          .and_then(|not_before| not_before.as_str())
+          .ok_or(GenericError::UnparseableTokenDate { claim_name: "nbf" })
+          .and_then(|nbf| {
+            nbf
+              .parse::<DateTime<Utc>>()
+              .map_err(|_| GenericError::UnparseableTokenDate { claim_name: "nbf" })
+          })?;
 
-      if parsed_nbf > Utc::now() {
-        return Err(GenericError::InvalidNotBeforeToken {})?;
+        if parsed_nbf > Utc::now() {
+          return Err(GenericError::InvalidNotBeforeToken {})?;
+        }
       }
 
       Ok(value)
     }
     #[cfg(feature = "easy_tokens_time")]
     TimeBackend::Time => {
-      let parsed_iat = value
-        .get("iat")
-        .and_then(|issued_at| issued_at.as_str())
-        .ok_or(GenericError::UnparseableTokenDate { claim_name: "iat" })
-        .and_then(|iat| {
-          OffsetDateTime::parse(iat, time::Format::Rfc3339)
-            .map_err(|_| GenericError::UnparseableTokenDate { claim_name: "iat" })
-        })?;
+      let iat_value = value.get("iat");
+      if iat_value.is_some() {
+        let parsed_iat = iat_value
+          .and_then(|issued_at| issued_at.as_str())
+          .ok_or(GenericError::UnparseableTokenDate { claim_name: "iat" })
+          .and_then(|iat| {
+            OffsetDateTime::parse(iat, time::Format::Rfc3339)
+              .map_err(|_| GenericError::UnparseableTokenDate { claim_name: "iat" })
+          })?;
 
-      if parsed_iat > OffsetDateTime::now_utc() {
-        return Err(GenericError::InvalidIssuedAtToken {})?;
+        if parsed_iat > OffsetDateTime::now_utc() {
+          return Err(GenericError::InvalidIssuedAtToken {})?;
+        }
       }
 
-      let parsed_exp = value
-        .get("exp")
-        .and_then(|expired| expired.as_str())
-        .ok_or(GenericError::UnparseableTokenDate { claim_name: "exp" })
-        .and_then(|exp| {
-          OffsetDateTime::parse(exp, time::Format::Rfc3339)
-            .map_err(|_| GenericError::UnparseableTokenDate { claim_name: "exp" })
-        })?;
+      let exp_value = value.get("exp");
+      if exp_value.is_some() {
+        let parsed_exp = exp_value
+          .and_then(|expired| expired.as_str())
+          .ok_or(GenericError::UnparseableTokenDate { claim_name: "exp" })
+          .and_then(|exp| {
+            OffsetDateTime::parse(exp, time::Format::Rfc3339)
+              .map_err(|_| GenericError::UnparseableTokenDate { claim_name: "exp" })
+          })?;
 
-      if parsed_exp < OffsetDateTime::now_utc() {
-        return Err(GenericError::ExpiredToken {})?;
+        if parsed_exp < OffsetDateTime::now_utc() {
+          return Err(GenericError::ExpiredToken {})?;
+        }
       }
 
-      let parsed_nbf = value
-        .get("nbf")
-        .and_then(|not_before| not_before.as_str())
-        .ok_or(GenericError::UnparseableTokenDate { claim_name: "nbf" })
-        .and_then(|nbf| {
-          OffsetDateTime::parse(nbf, time::Format::Rfc3339)
-            .map_err(|_| GenericError::UnparseableTokenDate { claim_name: "nbf" })
-        })?;
+      let nbf_value = value.get("nbf");
+      if nbf_value.is_some() {
+        let parsed_nbf = nbf_value
+          .and_then(|not_before| not_before.as_str())
+          .ok_or(GenericError::UnparseableTokenDate { claim_name: "nbf" })
+          .and_then(|nbf| {
+            OffsetDateTime::parse(nbf, time::Format::Rfc3339)
+              .map_err(|_| GenericError::UnparseableTokenDate { claim_name: "nbf" })
+          })?;
 
-      if parsed_nbf > OffsetDateTime::now_utc() {
-        return Err(GenericError::InvalidNotBeforeToken {})?;
+        if parsed_nbf > OffsetDateTime::now_utc() {
+          return Err(GenericError::InvalidNotBeforeToken {})?;
+        }
       }
 
       Ok(value)
@@ -479,5 +491,20 @@ mod unit_tests {
       &TimeBackend::Chrono
     )
     .is_err());
+  }
+
+  #[test]
+  #[cfg(all(feature = "v2", feature = "easy_tokens_chrono", not(feature = "easy_tokens_time")))]
+  fn allows_validation_without_iat_exp_nbf() {
+    let key = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    let state = PasetoBuilder::new()
+      .set_encryption_key(key.as_bytes())
+      .build()
+      .expect("failed to construct paseto token");
+
+    assert!(
+      validate_local_token(&state, None, key.as_bytes(), &TimeBackend::Chrono).is_ok(),
+      "Failed to validate token without nbf/iat/exp is okay!"
+    );
   }
 }
