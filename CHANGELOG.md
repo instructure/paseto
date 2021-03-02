@@ -1,3 +1,7 @@
+## 2.0.1+1.0.3
+
+* Fix mistake where token builder would incorrectly force `nbf`/`iat`/`exp` fields.
+
 ## 2.0.0+1.0.3
 
 * Change `pae::pae` to borrow a slice of slices (`&[&[u8]]`) instead of taking ownership of a `Vec<Vec<u8>>`.

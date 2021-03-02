@@ -4,7 +4,7 @@ use chrono::prelude::*;
 use serde_json::json;
 #[cfg(all(feature = "v2", feature = "easy_tokens_time"))]
 use time::{time, Date, OffsetDateTime};
-#[cfg(feature = "v2")]
+#[cfg(all(feature = "v2", any(feature = "easy_tokens_chrono", feature = "easy_tokens_time")))]
 use {ring::rand::SystemRandom, ring::signature::Ed25519KeyPair};
 
 fn main() {

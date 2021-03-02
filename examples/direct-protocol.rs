@@ -1,5 +1,6 @@
 fn main() {
   let key = "YELLOW SUBMARINE, BLACK WIZARDRY".as_bytes();
+  #[cfg(feature = "v2")]
   let mut key_mut = Vec::from(key);
   let message = "This is a signed non-JSON message.";
   let footer = "key-id:gandalf0";
