@@ -16,7 +16,7 @@ Simply add this crate to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-paseto = "2.0.0+1.0.3"
+paseto = "2.0.2+1.0.3"
 ```
 
 ## Examples ##
