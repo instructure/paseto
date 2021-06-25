@@ -1,3 +1,10 @@
+## 2.0.2+1.0.3
+
+* Migrate away from sodiumoxide as it has become less, and less maintained not
+  providing a stable secure base anymore. Migrate to supported rust-crypto
+  projects. `SodiumErrors` will keep it's name, but now represents these
+  replacements for "sodium".
+
 ## 2.0.1+1.0.3
 
 * Fix mistake where token builder would incorrectly force `nbf`/`iat`/`exp` fields.
