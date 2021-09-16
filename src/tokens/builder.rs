@@ -133,6 +133,14 @@ impl<'a> PasetoBuilder<'a> {
     self
   }
 
+  /// Provide multiple arbitrary claims at once, if a key is already present it will be updated.
+  ///
+  /// Mirrors [`std::iter::Extend`] for normal maps.
+  pub fn extend_claims(&'a mut self, claims: HashMap<&'a str, Value>) -> &'a mut Self {
+    self.extra_claims.extend(claims);
+    self
+  }
+
   /// Sets an arbitrary claim (a key inside the json token).
   pub fn set_claim(&'a mut self, key: &'a str, value: Value) -> &'a mut Self {
     self.extra_claims.insert(key, value);
@@ -244,6 +252,48 @@ impl<'a> PasetoBuilder<'a> {
 mod unit_test {
   #[cfg(feature = "v2")]
   use {super::*, crate::v2::local::decrypt_paseto as V2Decrypt, serde_json::from_str as ParseJson};
+
+  #[test]
+  #[cfg(all(feature = "v2", feature = "easy_tokens_chrono", not(feature = "easy_tokens_time")))]
+  fn can_construct_a_token_chrono_with_extend_claims() {
+    //set or get a map of any number of claims
+    let mut arbitrary_claims = HashMap::new();
+    arbitrary_claims.insert("claim1", json!("data1"));
+    arbitrary_claims.insert("claim2", json!("data2"));
+    arbitrary_claims.insert("claim3", json!("data3"));
+    arbitrary_claims.insert("claim4", json!("data4"));
+    arbitrary_claims.insert("claim5", json!("data5"));
+
+    let token = PasetoBuilder::new()
+      .set_encryption_key(&Vec::from("YELLOW SUBMARINE, BLACK WIZARDRY".as_bytes()))
+      .set_issued_at(None)
+      .set_expiration(&Utc::now())
+      .set_issuer("issuer")
+      .set_audience("audience")
+      .set_jti("jti")
+      .set_not_before(&Utc::now())
+      .set_subject("test")
+      .extend_claims(arbitrary_claims)
+      .set_footer("footer")
+      .build()
+      .expect("Failed to construct paseto token w/ builder!");
+
+    let decrypted_token = V2Decrypt(
+      &token,
+      Some("footer"),
+      &mut Vec::from("YELLOW SUBMARINE, BLACK WIZARDRY".as_bytes()),
+    )
+    .expect("Failed to decrypt token constructed with builder!");
+
+    let parsed: Value = ParseJson(&decrypted_token).expect("Failed to parse finalized token as json!");
+
+    assert!(parsed.get("claim1").is_some());
+    assert!(parsed.get("claim2").is_some());
+    assert!(parsed.get("claim3").is_some());
+    assert!(parsed.get("claim4").is_some());
+    assert!(parsed.get("claim5").is_some());
+    assert!(parsed.get("claim6").is_none());
+  }
 
   #[test]
   #[cfg(all(feature = "v2", feature = "easy_tokens_chrono", not(feature = "easy_tokens_time")))]
