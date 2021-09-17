@@ -16,7 +16,8 @@ variables: []
 steps:
   - script: |
       cargo fmt --all -- --check
-    displayName: Validate formatting
+      cargo clippy -- -W clippy::pedantic -D warnings
+    displayName: Validate formatting && Lint
   - script: |
       cargo test --no-default-features --features "v1"
       cargo test --no-default-features --features "v2"

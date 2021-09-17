@@ -1,4 +1,8 @@
 #![recursion_limit = "128"]
+#![allow(
+	clippy::match_wildcard_for_single_variants,
+	clippy::module_name_repetitions
+)]
 
 pub mod errors;
 pub mod pae;
