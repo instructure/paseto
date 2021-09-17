@@ -121,7 +121,7 @@ pub fn validate_potential_json_blob(data: &str, backend: &TimeBackend) -> Result
           .and_then(|issued_at| issued_at.as_str())
           .ok_or(GenericError::UnparseableTokenDate { claim_name: "iat" })
           .and_then(|iat| {
-            OffsetDateTime::parse(iat, time::Format::Rfc3339)
+            OffsetDateTime::parse(iat, &time::format_description::well_known::Rfc3339)
               .map_err(|_| GenericError::UnparseableTokenDate { claim_name: "iat" })
           })?;
 
@@ -136,7 +136,7 @@ pub fn validate_potential_json_blob(data: &str, backend: &TimeBackend) -> Result
           .and_then(|expired| expired.as_str())
           .ok_or(GenericError::UnparseableTokenDate { claim_name: "exp" })
           .and_then(|exp| {
-            OffsetDateTime::parse(exp, time::Format::Rfc3339)
+            OffsetDateTime::parse(exp, &time::format_description::well_known::Rfc3339)
               .map_err(|_| GenericError::UnparseableTokenDate { claim_name: "exp" })
           })?;
 
@@ -151,7 +151,7 @@ pub fn validate_potential_json_blob(data: &str, backend: &TimeBackend) -> Result
           .and_then(|not_before| not_before.as_str())
           .ok_or(GenericError::UnparseableTokenDate { claim_name: "nbf" })
           .and_then(|nbf| {
-            OffsetDateTime::parse(nbf, time::Format::Rfc3339)
+            OffsetDateTime::parse(nbf, &time::format_description::well_known::Rfc3339)
               .map_err(|_| GenericError::UnparseableTokenDate { claim_name: "nbf" })
           })?;
 

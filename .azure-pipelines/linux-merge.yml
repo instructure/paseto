@@ -35,5 +35,5 @@ steps:
   - script: |
       cargo test --no-default-features --features "v1,v2,easy_tokens_chrono,easy_tokens_time"
       cargo test --no-default-features --features "v1,easy_tokens_chrono,easy_tokens_time"
-      cargo test --no-default-features --features "v1,easy_tokens_chrono,easy_tokens_time"
+      cargo test --no-default-features --features "v2,easy_tokens_chrono,easy_tokens_time"
     displayName: Test with all features
