@@ -1,3 +1,6 @@
+//! The token "builder" which makes it easy to create JSON encoded Paseto
+//! tokens.
+
 #[cfg(feature = "v1")]
 use crate::errors::RsaKeyErrors;
 use crate::errors::{GenericError, PasetoError};
@@ -21,7 +24,7 @@ use time::OffsetDateTime;
 
 use std::collections::HashMap;
 
-/// A paseto builder.
+/// A structure that implements the builder pattern for building a Paseto token.
 pub struct PasetoBuilder<'a> {
 	/// Set the footer to use for this token.
 	footer: Option<&'a str>,
@@ -38,7 +41,7 @@ pub struct PasetoBuilder<'a> {
 }
 
 impl<'a> PasetoBuilder<'a> {
-	/// Creates a new Paseto builder.
+	/// Create a new token builder with no attributes set.
 	#[must_use]
 	pub fn new() -> PasetoBuilder<'a> {
 		PasetoBuilder {
@@ -52,11 +55,12 @@ impl<'a> PasetoBuilder<'a> {
 		}
 	}
 
-	/// Builds a token.
+	/// Attempt to 'build' or create the final token.
 	///
 	/// # Errors
 	///
-	/// If we fail to encrypt, or sign your token, or generate a random nonce.
+	/// - If you failed to set an encryption key.
+	/// - If the underlying encryption, or signing failed to be completed.
 	pub fn build(&self) -> Result<String, PasetoError> {
 		let strd_msg = to_string(&self.extra_claims)?;
 
@@ -105,7 +109,7 @@ impl<'a> Default for PasetoBuilder<'a> {
 impl<'a> PasetoBuilder<'a> {
 	/// Sets the RSA Key on a Paseto builder.
 	///
-	/// NOTE: This will not be used if you set a symmetric encryption key, or if you specify an Ed25519 key pair.
+	/// ***NOTE: This will not be used if you set a symmetric encryption key, or if you specify an Ed25519 key pair.***
 	pub fn set_rsa_key(&'a mut self, private_key_der: &'a [u8]) -> &'a mut Self {
 		self.rsa_key = Some(private_key_der);
 		self
@@ -116,7 +120,7 @@ impl<'a> PasetoBuilder<'a> {
 impl<'a> PasetoBuilder<'a> {
 	/// Sets the ED25519 Key pair.
 	///
-	/// NOTE: This will not be used if you set a symmetric encryption key.
+	/// ***NOTE: This will not be used if you set a symmetric encryption key.***
 	pub fn set_ed25519_key(&'a mut self, key_pair: &'a Ed25519KeyPair) -> &'a mut Self {
 		self.ed_key = Some(key_pair);
 		self
@@ -129,7 +133,7 @@ impl<'a> PasetoBuilder<'a> {
 	/// Keys should be exactly 32 bytes long, this is a requirement of the
 	/// underlying encryption algorithims.
 	///
-	/// NOTE: If you set this we _*will*_ use a local token.
+	/// ***NOTE: If you set this we _*will*_ use a local token.***
 	pub fn set_encryption_key(&'a mut self, encryption_key: &'a [u8]) -> &'a mut Self {
 		self.encryption_key = Some(encryption_key);
 		self

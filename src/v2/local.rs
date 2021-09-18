@@ -1,4 +1,4 @@
-//! An Implementation of Paseto V2 "local" tokens (or tokens that are encrypted with a shared secret).
+//! ["Direct" use of local (symmetrically-encrypted) tokens for V2 of Paseto.](https://github.com/paseto-standard/paseto-spec/blob/8b3fed8240e203b058649d01a82a8c412087bc87/docs/01-Protocol-Versions/Version2.md#encrypt)
 
 use crate::{
 	errors::{GenericError, PasetoError, SodiumErrors},
@@ -21,24 +21,17 @@ use ring::{
 
 const HEADER: &str = "v2.local.";
 
-/// Encrypt a "v2.local" paseto token.
+/// Encrypt a paseto token using `v2` of Paseto.
 ///
 /// Keys must be exactly 32 bytes long, this is a requirement of the underlying
-/// algorithim.
-///
-/// Returns a result of a string if encryption was successful.
+/// algorithim. Returns a result of the token as a string if encryption was successful.
 ///
 /// # Errors
 ///
-/// If random generation of a nonce failed, or encrypting the data failed.
+/// - If you pass in a key that is not exactly 32 bytes in length.
+/// - If we fail to talk to the system random number generator to generate 24 bytes.
+/// - If the calls to libsodium to encrypt your data fails.
 pub fn local_paseto(msg: &str, footer: Option<&str>, key: &[u8]) -> Result<String, PasetoError> {
-	let rng = SystemRandom::new();
-	let mut buff: [u8; 24] = [0_u8; 24];
-	let res = rng.fill(&mut buff);
-	if res.is_err() {
-		return Err(GenericError::RandomError {}.into());
-	}
-
 	if key.len() != 32 {
 		return Err(SodiumErrors::InvalidKeySize {
 			size_needed: 32,
@@ -47,15 +40,17 @@ pub fn local_paseto(msg: &str, footer: Option<&str>, key: &[u8]) -> Result<Strin
 		.into());
 	}
 
+	let rng = SystemRandom::new();
+	let mut buff: [u8; 24] = [0_u8; 24];
+	let res = rng.fill(&mut buff);
+	if res.is_err() {
+		return Err(GenericError::RandomError {}.into());
+	}
+
 	underlying_local_paseto(msg, footer, &buff, key)
 }
 
-/// Performs the underlying encryption of a paseto token. Split for unit testing.
-///
-/// `msg` - The Msg to Encrypt.
-/// `footer` - The footer to add.
-/// `nonce_key` - The key to the nonce, should be securely generated.
-/// `key` - The key to encrypt the message with.
+/// Performs the underlying encryption of a paseto token. Split for ease in unit testing.
 fn underlying_local_paseto(
 	msg: &str,
 	footer: Option<&str>,
@@ -104,15 +99,16 @@ fn underlying_local_paseto(
 	}
 }
 
-/// Decrypt a Paseto TOKEN, validating against an optional footer.
+/// Decrypt a paseto token using `v2` of Paseto, validating the footer.
 ///
-/// `token`: The Token to decrypt.
-/// `footer`: The Optional footer to validate.
-/// `key`: The key to decrypt your Paseto.
+/// Returns the contents of the token as a string.
 ///
 /// # Errors
 ///
-/// If the token is invalid in anyway, and cannot be decrypted.
+/// - If the token is not in the proper format: `v2.local.${encrypted_data}(.{optional_footer})?`
+/// - If the footer on the token did not match the footer passed in.
+/// - If we failed to decrypt the data.
+/// - If the data contained in the token was not valid utf-8.
 pub fn decrypt_paseto(
 	token: &str,
 	footer: Option<&str>,

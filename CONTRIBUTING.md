@@ -7,11 +7,11 @@ possible.
 
 We actively welcome your pull requests.
 
-1. Fork the repo and create your branch from `master`.
+1. Fork the repo and create your branch from `trunk`.
 2. Make sure your code builds.
 3. Make sure you update documentation where necessary.
 4. Make sure you add tests where also necessary, and that they pass.
-5. Please run rustfmt on all code before sending in a PR (and ensure our rustfmt.toml gets picked up so it uses two spaces).
+5. Please run rustfmt on all code before sending in a PR (and ensure our rustfmt.toml gets picked up so it uses tabs).
 
 ## Issues ##
 

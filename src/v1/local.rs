@@ -1,9 +1,8 @@
-//! An implementation of paseto v1 "local" tokens, or tokens encrypted using a shared secret.
+//! ["Direct" use of local (symmetrically-encrypted) tokens for V1 of Paseto.](https://github.com/paseto-standard/paseto-spec/blob/8b3fed8240e203b058649d01a82a8c412087bc87/docs/01-Protocol-Versions/Version1.md#encrypt)
 
 use crate::{
 	errors::{GenericError, PasetoError, SodiumErrors},
 	pae::pae,
-	v1::{get_nonce::calculate_hashed_nonce, key_wrapper::CustomKeyWrapper},
 };
 
 use base64::{decode_config, encode_config, URL_SAFE_NO_PAD};
@@ -15,23 +14,17 @@ use ring::rand::{SecureRandom, SystemRandom};
 
 const HEADER: &str = "v1.local.";
 
-/// Encrypt a "v1.local" paseto token.
+/// Encrypt a paseto token using `v1` of Paseto.
 ///
 /// Keys must be exactly 32 bytes long, this is a requirement of the underlying
-/// algorithim.
-///
-/// Returns a result of a string if encryption was successful.
+/// algorithim. Returns a result of the token as a string if encryption was successful.
 ///
 /// # Errors
 ///
-/// If random generation of a nonce failed, or encrypting the data failed.
+/// - If you pass in a key that is not exactly 32 bytes in length.
+/// - If we fail to talk to the system random number generator to generate 32 bytes.
+/// - If the calls to openssl to encrypt your data fails.
 pub fn local_paseto(msg: &str, footer: Option<&str>, key: &[u8]) -> Result<String, PasetoError> {
-	let rng = SystemRandom::new();
-	let mut buff: [u8; 32] = [0_u8; 32];
-	let res = rng.fill(&mut buff);
-	if res.is_err() {
-		return Err(PasetoError::GenericError(GenericError::RandomError {}));
-	}
 	if key.len() != 32 {
 		return Err(SodiumErrors::InvalidKeySize {
 			size_needed: 32,
@@ -40,15 +33,17 @@ pub fn local_paseto(msg: &str, footer: Option<&str>, key: &[u8]) -> Result<Strin
 		.into());
 	}
 
+	let rng = SystemRandom::new();
+	let mut buff: [u8; 32] = [0_u8; 32];
+	let res = rng.fill(&mut buff);
+	if res.is_err() {
+		return Err(PasetoError::GenericError(GenericError::RandomError {}));
+	}
+
 	underlying_local_paseto(msg, footer, &buff, key)
 }
 
-/// Performs the underlying encryption of a paseto token.
-///
-/// `msg` - The message to encrypt.
-/// `footer` - The optional footer.
-/// `random_nonce` - The random nonce.
-/// `key` - The key used for encryption.
+/// Performs the underlying encryption of a paseto token. Split for ease in unit testing.
 fn underlying_local_paseto(
 	msg: &str,
 	footer: Option<&str>,
@@ -116,15 +111,48 @@ fn underlying_local_paseto(
 	Ok(token)
 }
 
-/// Decrypt a version 1 paseto token.
+/// An implementation of `get_nonce` from the docs in paseto version one.
 ///
-/// `token` - The encrypted token.
-/// `footer` - The optional footer to validate against.
-/// `key` - The key used to encrypt the token.
+/// This function is to ensure that an RNG failure does not result in a
+/// nonce-misuse condition that breaks the security of our stream cipher.
+#[must_use]
+fn calculate_hashed_nonce(msg: &[u8], random_nonce: &[u8]) -> Vec<u8> {
+	let mac_key = Key::new(HMAC_SHA384, random_nonce);
+	let signed = sign(&mac_key, msg);
+	Vec::from(&signed.as_ref()[0..32])
+}
+
+/// A small module containing a simple structure that allows us to implement
+/// hkdf on any type regardless if we own it or not.
+///
+/// BORROWED FROM RING Itself.
+/// LICENSE: <https://github.com/briansmith/ring/blob/master/LICENSE>
+struct CustomKeyWrapper<T>(pub T);
+
+impl ring::hkdf::KeyType for CustomKeyWrapper<usize> {
+	fn len(&self) -> usize {
+		self.0
+	}
+}
+
+impl From<ring::hkdf::Okm<'_, CustomKeyWrapper<usize>>> for CustomKeyWrapper<Vec<u8>> {
+	fn from(okm: ring::hkdf::Okm<CustomKeyWrapper<usize>>) -> Self {
+		let mut r = vec![0_u8; okm.len().0];
+		okm.fill(&mut r).unwrap();
+		CustomKeyWrapper(r)
+	}
+}
+
+/// Decrypt a paseto token using `v1` of Paseto, validating the footer.
+///
+/// Returns the contents of the token as a string.
 ///
 /// # Errors
 ///
-/// If the token is invalid in anyway, and cannot be decrypted.
+/// - If the token is not in the proper format: `v1.local.${encrypted_data}(.{optional_footer})?`
+/// - If the footer on the token did not match the footer passed in.
+/// - If we failed to decrypt the data.
+/// - If the data contained in the token was not valid utf-8.
 pub fn decrypt_paseto(
 	token: &str,
 	footer: Option<&str>,
@@ -203,6 +231,7 @@ pub fn decrypt_paseto(
 #[cfg(test)]
 mod unit_tests {
 	use super::*;
+	use hex;
 	use ring::rand::{SecureRandom, SystemRandom};
 
 	#[test]
@@ -270,5 +299,26 @@ mod unit_tests {
 
 		assert!(should_fail_decryption_b.is_err());
 		assert!(should_fail_decryption_c.is_err());
+	}
+
+	#[test]
+	fn test_nonce_derivation() {
+		// Constants copied directly from paseto source.
+		let msg_a = "The quick brown fox jumped over the lazy dog.";
+		let msg_b = "The quick brown fox jumped over the lazy dof.";
+		let nonce =
+			hex::decode("808182838485868788898a8b8c8d8e8f").expect("Failed to decode nonce!");
+
+		let calculated_nonce_a = calculate_hashed_nonce(msg_a.as_bytes(), &nonce);
+		let calculated_nonce_b = calculate_hashed_nonce(msg_b.as_bytes(), &nonce);
+
+		assert_eq!(
+			"5e13b4f0fc111bf0cf9de4e97310b687858b51547e125790513cc1eaaef173cc",
+			hex::encode(&calculated_nonce_a)
+		);
+		assert_eq!(
+			"e1ba992f5cccd31714fd8c73adcdadabb00d0f23955a66907170c10072d66ffd",
+			hex::encode(&calculated_nonce_b)
+		)
 	}
 }

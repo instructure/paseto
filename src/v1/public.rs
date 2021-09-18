@@ -1,5 +1,4 @@
-//! An implementation of Paseto v1 "public" tokens, or tokens that
-//! are signed with a public/private key pair.
+//! ["Direct" use of public (signed but readable) tokens for V1 of Paseto.](https://github.com/paseto-standard/paseto-spec/blob/8b3fed8240e203b058649d01a82a8c412087bc87/docs/01-Protocol-Versions/Version1.md#sign)
 
 use crate::{
 	errors::{GenericError, PasetoError, RsaKeyErrors},
@@ -13,13 +12,15 @@ use ring::signature::{RsaKeyPair, UnparsedPublicKey, RSA_PSS_2048_8192_SHA384, R
 
 const HEADER: &str = "v1.public.";
 
-/// Sign a "v1.public" paseto token.
+/// Sign a paseto token using `v1` of Paseto.
 ///
-/// Returns a result of a string if signing was successful.
+/// Returns a result of the token as a string if encryption was successful.
 ///
 /// # Errors
 ///
-/// If there was a failure signing the data.
+/// - If the RSA Public Modulus Len is not 256 (you pass an invalid RSA Key).
+/// - If we fail to talk to the system random number generator to generate random numbers.
+/// - If we fail to call openssl to sign your data.
 pub fn public_paseto(
 	msg: &str,
 	footer: Option<&str>,
@@ -61,13 +62,16 @@ pub fn public_paseto(
 	Ok(token)
 }
 
-/// Verifies a "v1.public" paseto token based on a public key
+/// Verifies the signature of a paseto token using `v1` of Paseto, validating the footer.
 ///
-/// Returns the message if verification was successful.
+/// Returns the contents of the token as a string.
 ///
 /// # Errors
 ///
-/// If the string passed in was not a valid token, and did not have a correct footer.
+/// - If the token is not in the proper format: `v1.public.${signed_encoded_data}(.{optional_footer})?`
+/// - If the footer on the token did not match the footer passed in.
+/// - If we failed to validate the signature of the data.
+/// - If the data contained in the token was not valid utf-8.
 pub fn verify_paseto(
 	token: &str,
 	footer: Option<&str>,
