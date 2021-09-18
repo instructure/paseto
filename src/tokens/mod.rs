@@ -1,5 +1,15 @@
-//! Provides a "nice" wrapper around paseto tokens in order to check things such as "Expiration".
-//! Issuer, etc.
+//! "Easy Tokens", or helper functions to make building/validating tokens easier.
+//!
+//! The token builder is in general the recommended way to build, and validate
+//! paseto tokens. Not only does it do things like validate expirey time on verification
+//! It gives you a nice builder pattern to make setting common claims easier.
+//!
+//! See:
+//!
+//!   - [`self::builder::PasetoBuilder`]: Building a token of any kind.
+//!   - [`self::validate_local_token`]: validating a: `(v1.v2).local.` paseto token.
+//!   - [`self::validate_public_token`]: validating a: `(v1.v2).public.` paseto token.
+//!   - [`self::validate_potential_json_blob`]: if you manually decrypted a token, and just want to validate the JSON body.
 
 use crate::errors::{GenericError, PasetoError};
 
@@ -19,19 +29,22 @@ use time::OffsetDateTime;
 pub mod builder;
 pub use self::builder::*;
 
-/// Wraps the two paseto public key types so we can just have a `validate_public_token`
-/// method without splitting the two implementations.
+/// A small wrapper around all the types of public keys that can be used for
+/// signing data. For Algorithim Lucidity, and ease of APIs.
 pub enum PasetoPublicKey<'a> {
+	/// A RSA Public Key in DER format as a byte array.
 	#[cfg(feature = "v1")]
 	RSAPublicKey(&'a [u8]),
+	/// An ED25519 public key, but pass in the key pair for api ease.
 	#[cfg(feature = "v2")]
 	ED25519KeyPair(&'a Ed25519KeyPair),
+	/// An ED25519 Public Key as a byte array.
 	#[cfg(feature = "v2")]
 	ED25519PublicKey(&'a [u8]),
 }
 
 /// Specifies which time crate will be used as backend for validating a token's
-/// datetimes, i.e. `issued_at`. The available backends are [`Chrono`] and [`Time`],
+/// datetimes, e.g. `issued_at`. The available backends are [`Chrono`] and [`Time`],
 /// the can be enabled via the features `easy_tokens_chrono` and `easy_tokens_time`.
 /// The default feature and backend is [`Chrono`].
 ///
@@ -44,12 +57,12 @@ pub enum TimeBackend {
 	Time,
 }
 
-/// Validates a potential json data blob, returning a `JsonValue`.
+/// Validates a potential json data blob, returning a [`JsonValue`].
 ///
 /// This specifically validates:
-///   * `issued_at`
-///   * `expired`
-///   * `not_before`
+///   * `iat` (issued at)
+///   * `exp` (expired)
+///   * `nbf` (not before)
 ///
 /// This specifically does not validate:
 ///   * `audience`
@@ -59,8 +72,8 @@ pub enum TimeBackend {
 ///
 /// # Errors
 ///
-/// If the data of the token is not valid JSON, or contains invalid
-/// `issued_at`, `expired`, or `not_before` values.
+/// - if the data of the token is not valid JSON
+/// - the json contains invalid `iat`, `exp`, or `nbf` values.
 pub fn validate_potential_json_blob(
 	data: &str,
 	backend: &TimeBackend,
@@ -172,9 +185,9 @@ pub fn validate_potential_json_blob(
 /// Validate a local token for V1, or V2.
 ///
 /// This specifically validates:
-///   * `issued_at`
-///   * `expired`
-///   * `not_before`
+///   * `iat` (issued at)
+///   * `exp` (expired)
+///   * `nbf` (not before)
 ///
 /// This specifically does not validate:
 ///   * `audience`
@@ -188,7 +201,7 @@ pub fn validate_potential_json_blob(
 /// # Errors
 ///
 /// 1. If we fail to decrypt the local token.
-/// 2. If any of the token fields are invalid: `issued_at`, `expired`, or `not_before`.
+/// 2. If any of the token fields are invalid: `iat`, `exp`, or `nbf`.
 pub fn validate_local_token(
 	token: &str,
 	footer: Option<&str>,
@@ -217,9 +230,9 @@ pub fn validate_local_token(
 /// Validate a public token for V1, or V2.
 ///
 /// This specifically validates:
-///   * `issued_at`
-///   * `expired`
-///   * `not_before`
+///   * `iat` (issued at)
+///   * `exp` (expired)
+///   * `nbf` (not before)
 ///
 /// This specifically does not validate:
 ///   * `audience`
@@ -233,7 +246,7 @@ pub fn validate_local_token(
 /// # Errors
 ///
 /// 1. If the token cannot be decrypted.
-/// 2. If any of the claims are not valid `issued_at`, `expired`, `not_before`.
+/// 2. If any of the token fields are invalid: `iat`, `exp`, or `nbf`.
 pub fn validate_public_token(
 	token: &str,
 	footer: Option<&str>,

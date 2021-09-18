@@ -1,3 +1,11 @@
+## <Unreleased>
+
+* documentation overhaul
+* move to thiserror over failure
+* allow setting multiple claims at once in the builder
+* time has been upgraded to 0.3
+* chachapoly1305 has been upgraded to 0.9.0
+
 ## 2.0.2+1.0.3
 
 * Migrate away from sodiumoxide as it has become less, and less maintained not

@@ -1,9 +1,12 @@
-//! Implements "Pre-Authentication Encoding". Which is part of the Pasesto Specification
-//! for version 2 of Paseto.
+//! Implements "Pre-Authentication Encoding". An encoding scheme unique to
+//! paseto. Generally not useful outside of this crate.
+//!
+//! Pre-Authentication Encoding is an encoding mechanism meant to help
+//! prevent canonicalization attacks for local tokens in the additional
+//! data field. For more information see:
+//! <https://github.com/paseto-standard/paseto-spec/blob/8b3fed8240e203b058649d01a82a8c412087bc87/docs/01-Protocol-Versions/Common.md#authentication-padding>
 
-/// Encodes a u64-bit unsigned integer into a little-endian binary string.
-///
-/// * `to_encode` - The u8 to encode.
+/// Performs little endian encoding of an unsigned 64 bit integer.
 #[allow(clippy::cast_possible_truncation)]
 fn le64(mut to_encode: u64) -> Vec<u8> {
 	let mut the_vec = Vec::with_capacity(8);
@@ -16,12 +19,10 @@ fn le64(mut to_encode: u64) -> Vec<u8> {
 	the_vec
 }
 
-/// Performs Pre-Authentication Encoding (or PAE) as described in the
-/// Paseto Specification v2.
-///
-/// * `pieces` - The Pieces to concatenate, and encode together.
+/// Performs the actual pre authentication encoding for a list of binary
+/// strings.
 #[must_use]
-pub fn pae<'a>(pieces: &'a [&'a [u8]]) -> Vec<u8> {
+pub fn pae(pieces: &[&[u8]]) -> Vec<u8> {
 	let the_vec = le64(pieces.len() as u64);
 
 	pieces.iter().fold(the_vec, |mut acc, piece| {
