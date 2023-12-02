@@ -9,7 +9,7 @@ pr:
     - '*'
 
 pool:
-  vmImage: 'ubuntu@latest'
+  vmImage: 'ubuntu-latest'
 
 variables: []
 
